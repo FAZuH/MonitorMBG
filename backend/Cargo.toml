@@ -6,15 +6,18 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.100"
 async-trait = "0.1.89"
+chrono = { version = "0.4.43", features = ["serde"] }
 dotenv = "0.15.0"
 log = "0.4.29"
 serde = "1.0.228"
-sqlx = { version = "0.8.6", features = ["chrono", "postgres", "runtime-tokio", "sqlite"] }
+serde_json = "1.0.149"
+sqlx = { version = "0.8.6", features = ["chrono", "postgres", "runtime-tokio", "sqlite", "tls-native-tls", "uuid"] }
 thiserror = "2.0.18"
 tokio = { version = "1.49.0", features = ["rt-multi-thread", "macros", "signal"] }
 tracing = "0.1.44"
 tracing-appender = "0.2.4"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+uuid = { version = "1.19.0", features = ["v4", "serde"] }
 
 [lints.clippy]
 new_without_default = "allow"

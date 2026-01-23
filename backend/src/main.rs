@@ -5,7 +5,7 @@ pub mod logging;
 use std::sync::Arc;
 use std::time::Instant;
 
-use backend::db::Database;
+use backend::database::Database;
 use dotenv::dotenv;
 use log::debug;
 use log::info;
