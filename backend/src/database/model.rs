@@ -170,6 +170,25 @@ pub struct Institution {
     pub updated_at: Option<NaiveDateTime>,
 }
 
+impl Default for Institution {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name: String::default(),
+            r#type: String::default(),
+            address: None,
+            city: None,
+            province: None,
+            phone: None,
+            email: None,
+            registration_number: None,
+            verified: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+}
+
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct User {
     #[serde(default)]
@@ -185,6 +204,25 @@ pub struct User {
     pub last_login: Option<NaiveDateTime>,
     pub created_at: Option<NaiveDateTime>,
     pub updated_at: Option<NaiveDateTime>,
+}
+
+impl Default for User {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name: String::default(),
+            role: UserRole::Kitchen,
+            unique_code: String::default(),
+            phone: None,
+            verified: None,
+            institution_name: None,
+            institution_id: None,
+            ktp_photo_hash: None,
+            last_login: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
 }
 
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
@@ -206,6 +244,26 @@ pub struct Kitchen {
     pub updated_at: Option<NaiveDateTime>,
 }
 
+impl Default for Kitchen {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name: String::default(),
+            address: None,
+            city: None,
+            province: None,
+            location: None,
+            r#type: None,
+            meals_served: None,
+            certifications: None,
+            image_url: None,
+            owner_id: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+}
+
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct ComplianceMetric {
     #[serde(default)]
@@ -222,6 +280,24 @@ pub struct ComplianceMetric {
     pub updated_at: Option<NaiveDateTime>,
 }
 
+impl Default for ComplianceMetric {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            kitchen_id: Uuid::default(),
+            hygiene_score: None,
+            portion_compliance: None,
+            nutrition_compliance: None,
+            temperature_control: None,
+            sla_performance: None,
+            last_inspection_date: None,
+            trend: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+}
+
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct ChecklistItem {
     #[serde(default)]
@@ -232,6 +308,20 @@ pub struct ChecklistItem {
     pub status: Option<ChecklistStatus>,
     pub notes: Option<String>,
     pub created_at: Option<NaiveDateTime>,
+}
+
+impl Default for ChecklistItem {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            compliance_metric_id: Uuid::default(),
+            category: None,
+            item: None,
+            status: None,
+            notes: None,
+            created_at: None,
+        }
+    }
 }
 
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
@@ -258,6 +348,32 @@ pub struct Incident {
     pub updated_at: Option<NaiveDateTime>,
 }
 
+impl Default for Incident {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            kitchen_id: Uuid::default(),
+            r#type: IncidentType::Other,
+            source: IncidentSource::Public,
+            date: NaiveDateTime::default(),
+            location: None,
+            province: None,
+            food_type: None,
+            affected_count: None,
+            deaths: None,
+            cause: None,
+            severity: IncidentSeverity::Minor,
+            status: None,
+            description: None,
+            reported_by: None,
+            map_coordinates: None,
+            gps_coordinates: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+}
+
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct Inspection {
     #[serde(default)]
@@ -274,6 +390,24 @@ pub struct Inspection {
     pub updated_at: Option<NaiveDateTime>,
 }
 
+impl Default for Inspection {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            kitchen_id: Uuid::default(),
+            inspector_name: None,
+            date: NaiveDateTime::default(),
+            overall_score: None,
+            recommendations: None,
+            follow_up_status: None,
+            attachments: None,
+            next_inspection_date: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+}
+
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct InspectionFinding {
     #[serde(default)]
@@ -285,6 +419,21 @@ pub struct InspectionFinding {
     pub correction_required: Option<bool>,
     pub deadline: Option<NaiveDateTime>,
     pub created_at: Option<NaiveDateTime>,
+}
+
+impl Default for InspectionFinding {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            inspection_id: Uuid::default(),
+            category: FindingCategory::Observation,
+            description: String::default(),
+            evidence: None,
+            correction_required: None,
+            deadline: None,
+            created_at: None,
+        }
+    }
 }
 
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
@@ -305,6 +454,26 @@ pub struct Complaint {
     pub updated_at: Option<NaiveDateTime>,
 }
 
+impl Default for Complaint {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            kitchen_id: Uuid::default(),
+            category: ComplaintCategory::Other,
+            description: String::default(),
+            status: None,
+            reported_by: None,
+            reported_at: NaiveDateTime::default(),
+            sla_deadline: None,
+            assigned_to: None,
+            resolution: None,
+            satisfaction_rating: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+}
+
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct ComplaintEvidence {
     #[serde(default)]
@@ -317,6 +486,20 @@ pub struct ComplaintEvidence {
     pub created_at: Option<NaiveDateTime>,
 }
 
+impl Default for ComplaintEvidence {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            complaint_id: Uuid::default(),
+            url: String::default(),
+            timestamp: NaiveDateTime::default(),
+            metadata_status: None,
+            capture_method: None,
+            created_at: None,
+        }
+    }
+}
+
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct ComplaintComment {
     #[serde(default)]
@@ -327,6 +510,20 @@ pub struct ComplaintComment {
     pub role: Option<String>,
     pub message: String,
     pub created_at: Option<NaiveDateTime>,
+}
+
+impl Default for ComplaintComment {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            complaint_id: Uuid::default(),
+            author_id: None,
+            author_name: None,
+            role: None,
+            message: String::default(),
+            created_at: None,
+        }
+    }
 }
 
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
@@ -357,6 +554,36 @@ pub struct Review {
     pub updated_at: Option<NaiveDateTime>,
 }
 
+impl Default for Review {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            kitchen_id: Uuid::default(),
+            reviewer_id: Uuid::default(),
+            reviewer_name: String::default(),
+            reviewer_type: UserRole::School,
+            taste_rating: Decimal::default(),
+            hygiene_rating: Decimal::default(),
+            freshness_rating: Decimal::default(),
+            temperature_rating: Decimal::default(),
+            packaging_rating: Decimal::default(),
+            handling_rating: Decimal::default(),
+            comment: String::default(),
+            photos: None,
+            verification_status: Some("unverified".to_string()),
+            report_source: "public".to_string(),
+            confidence_level: "low".to_string(),
+            root_causes: None,
+            evidence: None,
+            dispute_status: Some("none".to_string()),
+            verified: None,
+            is_draft: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+}
+
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct ReviewDisputeHistory {
     #[serde(default)]
@@ -369,6 +596,20 @@ pub struct ReviewDisputeHistory {
     pub notes: Option<String>,
 }
 
+impl Default for ReviewDisputeHistory {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            review_id: Uuid::default(),
+            timestamp: None,
+            action: String::default(),
+            by_user_id: None,
+            by_user_code: None,
+            notes: None,
+        }
+    }
+}
+
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct PerformanceBadge {
     #[serde(default)]
@@ -379,6 +620,20 @@ pub struct PerformanceBadge {
     pub description: String,
     pub earned_date: NaiveDate,
     pub created_at: Option<NaiveDateTime>,
+}
+
+impl Default for PerformanceBadge {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            kitchen_id: Uuid::default(),
+            r#type: "gold".to_string(),
+            title: String::default(),
+            description: String::default(),
+            earned_date: NaiveDate::default(),
+            created_at: None,
+        }
+    }
 }
 
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
@@ -395,6 +650,22 @@ pub struct AuditLog {
     pub metadata: Option<serde_json::Value>,
 }
 
+impl Default for AuditLog {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            user_id: None,
+            user_name: None,
+            action: String::default(),
+            entity_type: String::default(),
+            entity_id: String::default(),
+            timestamp: None,
+            ip_address: None,
+            metadata: None,
+        }
+    }
+}
+
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct Alert {
     #[serde(default)]
@@ -407,6 +678,22 @@ pub struct Alert {
     pub timestamp: Option<NaiveDateTime>,
     pub acknowledged: Option<bool>,
     pub created_at: Option<NaiveDateTime>,
+}
+
+impl Default for Alert {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            kitchen_id: None,
+            r#type: AlertType::Compliance,
+            severity: AlertSeverity::Low,
+            title: String::default(),
+            message: String::default(),
+            timestamp: None,
+            acknowledged: None,
+            created_at: None,
+        }
+    }
 }
 
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
@@ -427,6 +714,26 @@ pub struct Notification {
     pub updated_at: Option<NaiveDateTime>,
 }
 
+impl Default for Notification {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            title: String::default(),
+            description: String::default(),
+            category: "hygiene".to_string(),
+            priority: "minor".to_string(),
+            kitchen_code: None,
+            school_code: None,
+            review_id: None,
+            status: Some("new".to_string()),
+            target_role: "all".to_string(),
+            created_by: String::default(),
+            created_at: None,
+            updated_at: None,
+        }
+    }
+}
+
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct NotificationAuditTrail {
     #[serde(default)]
@@ -435,6 +742,18 @@ pub struct NotificationAuditTrail {
     pub timestamp: Option<NaiveDateTime>,
     pub action: String,
     pub user_code: String,
+}
+
+impl Default for NotificationAuditTrail {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            notification_id: Uuid::default(),
+            timestamp: None,
+            action: String::default(),
+            user_code: String::default(),
+        }
+    }
 }
 
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
@@ -450,4 +769,21 @@ pub struct Video {
     pub thumbnail: Option<String>,
     pub haccp_relevance: Option<String>,
     pub created_at: Option<NaiveDateTime>,
+}
+
+impl Default for Video {
+    fn default() -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            youtube_id: String::default(),
+            title: String::default(),
+            description: None,
+            category: None,
+            duration: None,
+            upload_date: None,
+            thumbnail: None,
+            haccp_relevance: None,
+            created_at: None,
+        }
+    }
 }
