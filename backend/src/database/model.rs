@@ -1,4 +1,5 @@
 use chrono::{NaiveDate, NaiveDateTime};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -157,8 +158,7 @@ pub struct Institution {
     #[serde(default)]
     pub id: Uuid,
     pub name: String,
-    #[sqlx(rename = "type")]
-    pub type_: String, // school, supplier, kitchen, government
+    pub r#type: String, // school, supplier, kitchen, government
     pub address: Option<String>,
     pub city: Option<String>,
     pub province: Option<String>,
@@ -197,7 +197,7 @@ pub struct Kitchen {
     pub province: Option<String>,
     // location is generated, so strictly speaking read-only, but mapped here
     pub location: Option<String>,
-    pub type_: Option<KitchenType>,
+    pub r#type: Option<KitchenType>,
     pub meals_served: Option<i32>,
     pub certifications: Option<serde_json::Value>,
     pub image_url: Option<String>,
@@ -211,10 +211,10 @@ pub struct ComplianceMetric {
     #[serde(default)]
     pub id: Uuid,
     pub kitchen_id: Uuid,
-    pub hygiene_score: Option<f64>, // DECIMAL
-    pub portion_compliance: Option<f64>,
-    pub nutrition_compliance: Option<f64>,
-    pub temperature_control: Option<f64>,
+    pub hygiene_score: Option<Decimal>, // DECIMAL
+    pub portion_compliance: Option<Decimal>,
+    pub nutrition_compliance: Option<Decimal>,
+    pub temperature_control: Option<Decimal>,
     pub sla_performance: Option<serde_json::Value>,
     pub last_inspection_date: Option<NaiveDateTime>,
     pub trend: Option<ComplianceTrend>,
@@ -239,8 +239,7 @@ pub struct Incident {
     #[serde(default)]
     pub id: Uuid,
     pub kitchen_id: Uuid,
-    #[sqlx(rename = "type")]
-    pub type_: IncidentType,
+    pub r#type: IncidentType,
     pub source: IncidentSource,
     pub date: NaiveDateTime,
     pub location: Option<String>,
@@ -266,7 +265,7 @@ pub struct Inspection {
     pub kitchen_id: Uuid,
     pub inspector_name: Option<String>,
     pub date: NaiveDateTime,
-    pub overall_score: Option<f64>,
+    pub overall_score: Option<Decimal>,
     pub recommendations: Option<serde_json::Value>,
     pub follow_up_status: Option<InspectionFollowUpStatus>,
     pub attachments: Option<serde_json::Value>,
@@ -338,12 +337,12 @@ pub struct Review {
     pub reviewer_id: Uuid,
     pub reviewer_name: String,
     pub reviewer_type: UserRole,
-    pub taste_rating: f64,
-    pub hygiene_rating: f64,
-    pub freshness_rating: f64,
-    pub temperature_rating: f64,
-    pub packaging_rating: f64,
-    pub handling_rating: f64,
+    pub taste_rating: Decimal,
+    pub hygiene_rating: Decimal,
+    pub freshness_rating: Decimal,
+    pub temperature_rating: Decimal,
+    pub packaging_rating: Decimal,
+    pub handling_rating: Decimal,
     pub comment: String,
     pub photos: Option<serde_json::Value>,
     pub verification_status: Option<String>,
@@ -375,8 +374,7 @@ pub struct PerformanceBadge {
     #[serde(default)]
     pub id: Uuid,
     pub kitchen_id: Uuid,
-    #[sqlx(rename = "type")]
-    pub type_: String,
+    pub r#type: String,
     pub title: String,
     pub description: String,
     pub earned_date: NaiveDate,
@@ -402,8 +400,7 @@ pub struct Alert {
     #[serde(default)]
     pub id: Uuid,
     pub kitchen_id: Option<Uuid>,
-    #[sqlx(rename = "type")]
-    pub type_: AlertType,
+    pub r#type: AlertType,
     pub severity: AlertSeverity,
     pub title: String,
     pub message: String,

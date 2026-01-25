@@ -196,7 +196,7 @@ impl_table!(
     "name=$1, type=$2, address=$3, city=$4, province=$5, phone=$6, email=$7, registration_number=$8, verified=$9 WHERE id=$10",
     [
         name,
-        type_,
+        r#type,
         address,
         city,
         province,
@@ -274,7 +274,7 @@ impl_table!(
         address,
         city,
         province,
-        type_,
+        r#type,
         meals_served,
         certifications,
         image_url,
@@ -305,8 +305,8 @@ impl_table!(
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "kitchen_id, hygiene_score, portion_compliance, nutrition_compliance, temperature_control, sla_performance, last_inspection_date, trend",
-    ", , , , , , , ",
-    "kitchen_id=, hygiene_score=, portion_compliance=, nutrition_compliance=, temperature_control=, sla_performance=, last_inspection_date=, trend= WHERE id=",
+    "$1, $2, $3, $4, $5, $6, $7, $8",
+    "kitchen_id=$1, hygiene_score=$2, portion_compliance=$3, nutrition_compliance=$4, temperature_control=$5, sla_performance=$6, last_inspection_date=$7, trend=$8 WHERE id=$9",
     [
         kitchen_id,
         hygiene_score,
@@ -337,8 +337,8 @@ impl_table!(
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "compliance_metric_id, category, item, status, notes",
-    ", , , , ",
-    "compliance_metric_id=, category=, item=, status=, notes= WHERE id=",
+    "$1, $2, $3, $4, $5",
+    "compliance_metric_id=$1, category=$2, item=$3, status=$4, notes=$5 WHERE id=$6",
     [
         compliance_metric_id,
         category,
@@ -378,11 +378,11 @@ impl_table!(
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "kitchen_id, type, source, date, location, province, food_type, affected_count, deaths, cause, severity, status, description, reported_by, map_coordinates, gps_coordinates",
-    ", , , , , , , , , , , , , , , ",
-    "kitchen_id=, type=, source=, date=, location=, province=, food_type=, affected_count=, deaths=, cause=, severity=, status=, description=, reported_by=, map_coordinates=, gps_coordinates= WHERE id=",
+    "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16",
+    "kitchen_id=$1, type=$2, source=$3, date=$4, location=$5, province=$6, food_type=$7, affected_count=$8, deaths=$9, cause=$10, severity=$11, status=$12, description=$13, reported_by=$14, map_coordinates=$15, gps_coordinates=$16 WHERE id=$17",
     [
         kitchen_id,
-        type_,
+        r#type,
         source,
         date,
         location,
@@ -422,8 +422,8 @@ impl_table!(
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "kitchen_id, inspector_name, date, overall_score, recommendations, follow_up_status, attachments, next_inspection_date",
-    ", , , , , , , ",
-    "kitchen_id=, inspector_name=, date=, overall_score=, recommendations=, follow_up_status=, attachments=, next_inspection_date= WHERE id=",
+    "$1, $2, $3, $4, $5, $6, $7, $8",
+    "kitchen_id=$1, inspector_name=$2, date=$3, overall_score=$4, recommendations=$5, follow_up_status=$6, attachments=$7, next_inspection_date=$8 WHERE id=$9",
     [
         kitchen_id,
         inspector_name,
@@ -455,8 +455,8 @@ impl_table!(
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "inspection_id, category, description, evidence, correction_required, deadline",
-    ", , , , , ",
-    "inspection_id=, category=, description=, evidence=, correction_required=, deadline= WHERE id=",
+    "$1, $2, $3, $4, $5, $6",
+    "inspection_id=$1, category=$2, description=$3, evidence=$4, correction_required=$5, deadline=$6 WHERE id=$7",
     [
         inspection_id,
         category,
@@ -491,8 +491,8 @@ impl_table!(
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "kitchen_id, category, description, status, reported_by, reported_at, sla_deadline, assigned_to, resolution, satisfaction_rating",
-    ", , , , , , , , , ",
-    "kitchen_id=, category=, description=, status=, reported_by=, reported_at=, sla_deadline=, assigned_to=, resolution=, satisfaction_rating= WHERE id=",
+    "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10",
+    "kitchen_id=$1, category=$2, description=$3, status=$4, reported_by=$5, reported_at=$6, sla_deadline=$7, assigned_to=$8, resolution=$9, satisfaction_rating=$10 WHERE id=$11",
     [
         kitchen_id,
         category,
@@ -525,8 +525,8 @@ impl_table!(
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "complaint_id, url, timestamp, metadata_status, capture_method",
-    ", , , , ",
-    "complaint_id=, url=, timestamp=, metadata_status=, capture_method= WHERE id=",
+    "$1, $2, $3, $4, $5",
+    "complaint_id=$1, url=$2, timestamp=$3, metadata_status=$4, capture_method=$5 WHERE id=$6",
     [
         complaint_id,
         url,
@@ -554,8 +554,8 @@ impl_table!(
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "complaint_id, author_id, author_name, role, message",
-    ", , , , ",
-    "complaint_id=, author_id=, author_name=, role=, message= WHERE id=",
+    "$1, $2, $3, $4, $5",
+    "complaint_id=$1, author_id=$2, author_name=$3, role=$4, message=$5 WHERE id=$6",
     [
         complaint_id,
         author_id,
@@ -599,8 +599,8 @@ impl_table!(
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "kitchen_id, reviewer_id, reviewer_name, reviewer_type, taste_rating, hygiene_rating, freshness_rating, temperature_rating, packaging_rating, handling_rating, comment, photos, verification_status, report_source, confidence_level, root_causes, evidence, dispute_status, verified, is_draft",
-    ", , , , , , , , , , , , , , , , , , , ",
-    "kitchen_id=, reviewer_id=, reviewer_name=, reviewer_type=, taste_rating=, hygiene_rating=, freshness_rating=, temperature_rating=, packaging_rating=, handling_rating=, comment=, photos=, verification_status=, report_source=, confidence_level=, root_causes=, evidence=, dispute_status=, verified=, is_draft= WHERE id=",
+    "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20",
+    "kitchen_id=$1, reviewer_id=$2, reviewer_name=$3, reviewer_type=$4, taste_rating=$5, hygiene_rating=$6, freshness_rating=$7, temperature_rating=$8, packaging_rating=$9, handling_rating=$10, comment=$11, photos=$12, verification_status=$13, report_source=$14, confidence_level=$15, root_causes=$16, evidence=$17, dispute_status=$18, verified=$19, is_draft=$20 WHERE id=$21",
     [
         kitchen_id,
         reviewer_id,
@@ -643,8 +643,8 @@ impl_table!(
         notes TEXT
     )"#,
     "review_id, timestamp, action, by_user_id, by_user_code, notes",
-    ", , , , , ",
-    "review_id=, timestamp=, action=, by_user_id=, by_user_code=, notes= WHERE id=",
+    "$1, $2, $3, $4, $5, $6",
+    "review_id=$1, timestamp=$2, action=$3, by_user_id=$4, by_user_code=$5, notes=$6 WHERE id=$7",
     [
         review_id,
         timestamp,
@@ -673,11 +673,11 @@ impl_table!(
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "kitchen_id, type, title, description, earned_date",
-    ", , , , ",
-    "kitchen_id=, type=, title=, description=, earned_date= WHERE id=",
+    "$1, $2, $3, $4, $5",
+    "kitchen_id=$1, type=$2, title=$3, description=$4, earned_date=$5 WHERE id=$6",
     [
         kitchen_id,
-        type_,
+        r#type,
         title,
         description,
         earned_date
@@ -704,8 +704,8 @@ impl_table!(
         metadata JSONB
     )"#,
     "user_id, user_name, action, entity_type, entity_id, timestamp, ip_address, metadata",
-    ", , , , , , , ",
-    "user_id=, user_name=, action=, entity_type=, entity_id=, timestamp=, ip_address=, metadata= WHERE id=",
+    "$1, $2, $3, $4, $5, $6, $7, $8",
+    "user_id=$1, user_name=$2, action=$3, entity_type=$4, entity_id=$5, timestamp=$6, ip_address=$7, metadata=$8 WHERE id=$9",
     [
         user_id,
         user_name,
@@ -738,11 +738,11 @@ impl_table!(
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "kitchen_id, type, severity, title, message, timestamp, acknowledged",
-    ", , , , , , ",
-    "kitchen_id=, type=, severity=, title=, message=, timestamp=, acknowledged= WHERE id=",
+    "$1, $2, $3, $4, $5, $6, $7",
+    "kitchen_id=$1, type=$2, severity=$3, title=$4, message=$5, timestamp=$6, acknowledged=$7 WHERE id=$8",
     [
         kitchen_id,
-        type_,
+        r#type,
         severity,
         title,
         message,
@@ -775,8 +775,8 @@ impl_table!(
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "title, description, category, priority, kitchen_code, school_code, review_id, status, target_role, created_by",
-    ", , , , , , , , , ",
-    "title=, description=, category=, priority=, kitchen_code=, school_code=, review_id=, status=, target_role=, created_by= WHERE id=",
+    "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10",
+    "title=$1, description=$2, category=$3, priority=$4, kitchen_code=$5, school_code=$6, review_id=$7, status=$8, target_role=$9, created_by=$10 WHERE id=$11",
     [
         title,
         description,
@@ -807,8 +807,8 @@ impl_table!(
         user_code VARCHAR(50) NOT NULL
     )"#,
     "notification_id, timestamp, action, user_code",
-    ", , , ",
-    "notification_id=, timestamp=, action=, user_code= WHERE id=",
+    "$1, $2, $3, $4",
+    "notification_id=$1, timestamp=$2, action=$3, user_code=$4 WHERE id=$5",
     [
         notification_id,
         timestamp,
@@ -838,8 +838,8 @@ impl_table!(
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
     "youtube_id, title, description, category, duration, upload_date, thumbnail, haccp_relevance",
-    ", , , , , , , ",
-    "youtube_id=, title=, description=, category=, duration=, upload_date=, thumbnail=, haccp_relevance= WHERE id=",
+    "$1, $2, $3, $4, $5, $6, $7, $8",
+    "youtube_id=$1, title=$2, description=$3, category=$4, duration=$5, upload_date=$6, thumbnail=$7, haccp_relevance=$8 WHERE id=$9",
     [
         youtube_id,
         title,
