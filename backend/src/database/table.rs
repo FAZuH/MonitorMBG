@@ -170,6 +170,24 @@ macro_rules! impl_table {
     };
 }
 
+impl UserTable {
+    pub async fn find_by_unique_code(&self, unique_code: &str) -> Result<Option<User>, DatabaseError> {
+        Ok(sqlx::query_as::<_, User>(
+            r#"
+            SELECT 
+                id, name, role, unique_code, phone, verified, 
+                institution_name, institution_id, ktp_photo_hash, last_login, 
+                created_at, updated_at, password_hash
+            FROM users 
+            WHERE unique_code = $1
+            "#
+        )
+        .bind(unique_code)
+        .fetch_optional(&self.base.pool)
+        .await?)
+    }
+}
+
 impl_table!(
     InstitutionTable,
     Institution,
@@ -223,14 +241,15 @@ impl_table!(
         verified BOOLEAN DEFAULT FALSE,
         institution_name VARCHAR(255),
         institution_id UUID,
+        password_hash VARCHAR(255),
         ktp_photo_hash VARCHAR(255),
         last_login TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )"#,
-    "name, role, unique_code, phone, verified, institution_name, institution_id, ktp_photo_hash, last_login",
-    "$1, $2, $3, $4, $5, $6, $7, $8, $9",
-    "name=$1, role=$2, unique_code=$3, phone=$4, verified=$5, institution_name=$6, institution_id=$7, ktp_photo_hash=$8, last_login=$9 WHERE id=$10",
+    "name, role, unique_code, phone, verified, institution_name, institution_id, password_hash, ktp_photo_hash, last_login",
+    "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10",
+    "name=$1, role=$2, unique_code=$3, phone=$4, verified=$5, institution_name=$6, institution_id=$7, password_hash=$8, ktp_photo_hash=$9, last_login=$10 WHERE id=$11",
     [
         name,
         role,
@@ -239,6 +258,7 @@ impl_table!(
         verified,
         institution_name,
         institution_id,
+        password_hash,
         ktp_photo_hash,
         last_login
     ]

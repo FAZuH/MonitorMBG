@@ -1,17 +1,17 @@
-pub mod config;
-pub mod error;
-pub mod logging;
-
 use std::sync::Arc;
 use std::time::Instant;
 
+use axum::Router;
+use backend::auth::handlers::{auth_routes, AuthState};
+use backend::config::Config;
 use backend::database::Database;
+use backend::logging::setup_logging;
+use backend::middleware::rate_limit::{rate_limit, RateLimitMiddleware};
+use backend::service::auth::AuthService;
 use dotenv::dotenv;
 use log::debug;
 use log::info;
-
-use crate::config::Config;
-use crate::logging::setup_logging;
+use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -36,15 +36,34 @@ async fn main() -> anyhow::Result<()> {
         init_start.elapsed().as_secs_f64()
     );
 
-    // Listen for exit signal
+    // Setup Services
+    let auth_service = Arc::new(AuthService::new(db.clone(), config.clone()));
+
+    // Setup Auth State
+    let auth_state = AuthState {
+        service: auth_service,
+    };
+
+    // Setup Rate Limit
+    let rl_state = RateLimitMiddleware::new(100);
+
+    // Setup Router
+    let app = Router::new()
+        .nest("/auth", auth_routes(auth_state))
+        .layer(axum::middleware::from_fn_with_state(rl_state, rate_limit));
+
+    // Start Server
+    let addr = format!("{}:{}", config.host, config.port);
+    let listener = TcpListener::bind(&addr).await?;
+    info!("Listening on {}", listener.local_addr()?);
+
     let init_done = init_start.elapsed();
     info!(
-        "MonitorMBG (backend) is up in {:.2}s. Press Ctrl+C to stop.",
+        "MonitorMBG (backend) is up in {:.2}s.",
         init_done.as_secs_f64()
     );
-    tokio::signal::ctrl_c().await?;
-    info!("Ctrl+C received, shutting down.");
-    // Stop publishers
+
+    axum::serve(listener, app).await?;
 
     Ok(())
 }
