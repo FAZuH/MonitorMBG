@@ -33,9 +33,18 @@ mod institution_table_tests {
             ..Default::default()
         };
 
-        let id = db.institution_table.insert(&institution).await.expect("Failed to insert institution");
-        
-        let fetched = db.institution_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .institution_table
+            .insert(&institution)
+            .await
+            .expect("Failed to insert institution");
+
+        let fetched = db
+            .institution_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.name, "Test School");
         assert_eq!(fetched.r#type, "school");
     });
@@ -49,14 +58,31 @@ mod institution_table_tests {
             ..Default::default()
         };
 
-        let id = db.institution_table.insert(&institution).await.expect("Failed to insert");
-        
-        let mut to_update = db.institution_table.select(&id).await.expect("Failed to select").unwrap();
-        to_update.name = "Updated Name".to_string();
-        
-        db.institution_table.update(&to_update).await.expect("Failed to update");
+        let id = db
+            .institution_table
+            .insert(&institution)
+            .await
+            .expect("Failed to insert");
 
-        let fetched = db.institution_table.select(&id).await.expect("Failed to select").unwrap();
+        let mut to_update = db
+            .institution_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
+        to_update.name = "Updated Name".to_string();
+
+        db.institution_table
+            .update(&to_update)
+            .await
+            .expect("Failed to update");
+
+        let fetched = db
+            .institution_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.name, "Updated Name");
     });
 
@@ -69,11 +95,22 @@ mod institution_table_tests {
             ..Default::default()
         };
 
-        let id = db.institution_table.insert(&institution).await.expect("Failed to insert");
-        
-        db.institution_table.delete(&id).await.expect("Failed to delete");
+        let id = db
+            .institution_table
+            .insert(&institution)
+            .await
+            .expect("Failed to insert");
 
-        let fetched = db.institution_table.select(&id).await.expect("Failed to select");
+        db.institution_table
+            .delete(&id)
+            .await
+            .expect("Failed to delete");
+
+        let fetched = db
+            .institution_table
+            .select(&id)
+            .await
+            .expect("Failed to select");
         assert!(fetched.is_none());
     });
 }
@@ -91,9 +128,18 @@ mod user_table_tests {
             ..Default::default()
         };
 
-        let id = db.user_table.insert(&user).await.expect("Failed to insert user");
-        
-        let fetched = db.user_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .user_table
+            .insert(&user)
+            .await
+            .expect("Failed to insert user");
+
+        let fetched = db
+            .user_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.name, "Test User");
         assert_eq!(fetched.role, UserRole::Admin);
     });
@@ -113,9 +159,18 @@ mod kitchen_table_tests {
             ..Default::default()
         };
 
-        let id = db.kitchen_table.insert(&kitchen).await.expect("Failed to insert kitchen");
-        
-        let fetched = db.kitchen_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .kitchen_table
+            .insert(&kitchen)
+            .await
+            .expect("Failed to insert kitchen");
+
+        let fetched = db
+            .kitchen_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.name, "Central Kitchen 1");
     });
 }
@@ -128,7 +183,11 @@ mod compliance_metric_tests {
             name: "Kitchen for Metric".to_string(),
             ..Default::default()
         };
-        let kitchen_id = db.kitchen_table.insert(&kitchen).await.expect("Failed to insert kitchen");
+        let kitchen_id = db
+            .kitchen_table
+            .insert(&kitchen)
+            .await
+            .expect("Failed to insert kitchen");
 
         let metric = ComplianceMetric {
             kitchen_id,
@@ -140,10 +199,22 @@ mod compliance_metric_tests {
             ..Default::default()
         };
 
-        let id = db.compliance_metric_table.insert(&metric).await.expect("Failed to insert metric");
-        
-        let fetched = db.compliance_metric_table.select(&id).await.expect("Failed to select").unwrap();
-        assert_eq!(fetched.hygiene_score, Some(Decimal::from_f64_retain(95.5).unwrap()));
+        let id = db
+            .compliance_metric_table
+            .insert(&metric)
+            .await
+            .expect("Failed to insert metric");
+
+        let fetched = db
+            .compliance_metric_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
+        assert_eq!(
+            fetched.hygiene_score,
+            Some(Decimal::from_f64_retain(95.5).unwrap())
+        );
         assert_eq!(fetched.trend, Some(ComplianceTrend::Improving));
     });
 }
@@ -156,13 +227,21 @@ mod checklist_item_tests {
             name: "Kitchen for Checklist".to_string(),
             ..Default::default()
         };
-        let kitchen_id = db.kitchen_table.insert(&kitchen).await.expect("Failed to insert kitchen");
+        let kitchen_id = db
+            .kitchen_table
+            .insert(&kitchen)
+            .await
+            .expect("Failed to insert kitchen");
 
         let metric = ComplianceMetric {
             kitchen_id,
             ..Default::default()
         };
-        let metric_id = db.compliance_metric_table.insert(&metric).await.expect("Failed to insert metric");
+        let metric_id = db
+            .compliance_metric_table
+            .insert(&metric)
+            .await
+            .expect("Failed to insert metric");
 
         let item = ChecklistItem {
             compliance_metric_id: metric_id,
@@ -172,9 +251,18 @@ mod checklist_item_tests {
             ..Default::default()
         };
 
-        let id = db.checklist_item_table.insert(&item).await.expect("Failed to insert checklist item");
-        
-        let fetched = db.checklist_item_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .checklist_item_table
+            .insert(&item)
+            .await
+            .expect("Failed to insert checklist item");
+
+        let fetched = db
+            .checklist_item_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.item, Some("Clean floor".to_string()));
         assert_eq!(fetched.status, Some(ChecklistStatus::Pass));
     });
@@ -188,7 +276,11 @@ mod incident_tests {
             name: "Kitchen for Incident".to_string(),
             ..Default::default()
         };
-        let kitchen_id = db.kitchen_table.insert(&kitchen).await.expect("Failed to insert kitchen");
+        let kitchen_id = db
+            .kitchen_table
+            .insert(&kitchen)
+            .await
+            .expect("Failed to insert kitchen");
 
         let incident = Incident {
             kitchen_id,
@@ -199,9 +291,18 @@ mod incident_tests {
             ..Default::default()
         };
 
-        let id = db.incident_table.insert(&incident).await.expect("Failed to insert incident");
-        
-        let fetched = db.incident_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .incident_table
+            .insert(&incident)
+            .await
+            .expect("Failed to insert incident");
+
+        let fetched = db
+            .incident_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.r#type, IncidentType::Poisoning);
         assert_eq!(fetched.severity, IncidentSeverity::Critical);
     });
@@ -215,7 +316,11 @@ mod inspection_tests {
             name: "Kitchen for Inspection".to_string(),
             ..Default::default()
         };
-        let kitchen_id = db.kitchen_table.insert(&kitchen).await.expect("Failed to insert kitchen");
+        let kitchen_id = db
+            .kitchen_table
+            .insert(&kitchen)
+            .await
+            .expect("Failed to insert kitchen");
 
         let inspection = Inspection {
             kitchen_id,
@@ -224,9 +329,18 @@ mod inspection_tests {
             ..Default::default()
         };
 
-        let id = db.inspection_table.insert(&inspection).await.expect("Failed to insert inspection");
-        
-        let fetched = db.inspection_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .inspection_table
+            .insert(&inspection)
+            .await
+            .expect("Failed to insert inspection");
+
+        let fetched = db
+            .inspection_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.inspector_name, Some("Inspector Gadget".to_string()));
     });
 }
@@ -239,13 +353,21 @@ mod inspection_finding_tests {
             name: "Kitchen for Finding".to_string(),
             ..Default::default()
         };
-        let kitchen_id = db.kitchen_table.insert(&kitchen).await.expect("Failed to insert kitchen");
+        let kitchen_id = db
+            .kitchen_table
+            .insert(&kitchen)
+            .await
+            .expect("Failed to insert kitchen");
 
         let inspection = Inspection {
             kitchen_id,
             ..Default::default()
         };
-        let inspection_id = db.inspection_table.insert(&inspection).await.expect("Failed to insert inspection");
+        let inspection_id = db
+            .inspection_table
+            .insert(&inspection)
+            .await
+            .expect("Failed to insert inspection");
 
         let finding = InspectionFinding {
             inspection_id,
@@ -254,9 +376,18 @@ mod inspection_finding_tests {
             ..Default::default()
         };
 
-        let id = db.inspection_finding_table.insert(&finding).await.expect("Failed to insert finding");
-        
-        let fetched = db.inspection_finding_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .inspection_finding_table
+            .insert(&finding)
+            .await
+            .expect("Failed to insert finding");
+
+        let fetched = db
+            .inspection_finding_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.description, "Dirty surfaces");
         assert_eq!(fetched.category, FindingCategory::Major);
     });
@@ -270,7 +401,11 @@ mod complaint_tests {
             name: "Kitchen for Complaint".to_string(),
             ..Default::default()
         };
-        let kitchen_id = db.kitchen_table.insert(&kitchen).await.expect("Failed to insert kitchen");
+        let kitchen_id = db
+            .kitchen_table
+            .insert(&kitchen)
+            .await
+            .expect("Failed to insert kitchen");
 
         let complaint = Complaint {
             kitchen_id,
@@ -280,9 +415,18 @@ mod complaint_tests {
             ..Default::default()
         };
 
-        let id = db.complaint_table.insert(&complaint).await.expect("Failed to insert complaint");
-        
-        let fetched = db.complaint_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .complaint_table
+            .insert(&complaint)
+            .await
+            .expect("Failed to insert complaint");
+
+        let fetched = db
+            .complaint_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.description, "Too salty");
         assert_eq!(fetched.category, ComplaintCategory::Taste);
     });
@@ -296,13 +440,21 @@ mod complaint_evidence_tests {
             name: "Kitchen for Evidence".to_string(),
             ..Default::default()
         };
-        let kitchen_id = db.kitchen_table.insert(&kitchen).await.expect("Failed to insert kitchen");
+        let kitchen_id = db
+            .kitchen_table
+            .insert(&kitchen)
+            .await
+            .expect("Failed to insert kitchen");
 
         let complaint = Complaint {
             kitchen_id,
             ..Default::default()
         };
-        let complaint_id = db.complaint_table.insert(&complaint).await.expect("Failed to insert complaint");
+        let complaint_id = db
+            .complaint_table
+            .insert(&complaint)
+            .await
+            .expect("Failed to insert complaint");
 
         let evidence = ComplaintEvidence {
             complaint_id,
@@ -311,11 +463,23 @@ mod complaint_evidence_tests {
             ..Default::default()
         };
 
-        let id = db.complaint_evidence_table.insert(&evidence).await.expect("Failed to insert evidence");
-        
-        let fetched = db.complaint_evidence_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .complaint_evidence_table
+            .insert(&evidence)
+            .await
+            .expect("Failed to insert evidence");
+
+        let fetched = db
+            .complaint_evidence_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.url, "http://example.com/photo.jpg");
-        assert_eq!(fetched.metadata_status, Some(EvidenceMetadataStatus::Verified));
+        assert_eq!(
+            fetched.metadata_status,
+            Some(EvidenceMetadataStatus::Verified)
+        );
     });
 }
 
@@ -327,13 +491,21 @@ mod complaint_comment_tests {
             name: "Kitchen for Comment".to_string(),
             ..Default::default()
         };
-        let kitchen_id = db.kitchen_table.insert(&kitchen).await.expect("Failed to insert kitchen");
+        let kitchen_id = db
+            .kitchen_table
+            .insert(&kitchen)
+            .await
+            .expect("Failed to insert kitchen");
 
         let complaint = Complaint {
             kitchen_id,
             ..Default::default()
         };
-        let complaint_id = db.complaint_table.insert(&complaint).await.expect("Failed to insert complaint");
+        let complaint_id = db
+            .complaint_table
+            .insert(&complaint)
+            .await
+            .expect("Failed to insert complaint");
 
         let comment = ComplaintComment {
             complaint_id,
@@ -342,9 +514,18 @@ mod complaint_comment_tests {
             ..Default::default()
         };
 
-        let id = db.complaint_comment_table.insert(&comment).await.expect("Failed to insert comment");
-        
-        let fetched = db.complaint_comment_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .complaint_comment_table
+            .insert(&comment)
+            .await
+            .expect("Failed to insert comment");
+
+        let fetched = db
+            .complaint_comment_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.message, "Investigating this issue");
         assert_eq!(fetched.author_name, Some("Admin".to_string()));
     });
@@ -358,14 +539,22 @@ mod review_tests {
             name: "Kitchen for Review".to_string(),
             ..Default::default()
         };
-        let kitchen_id = db.kitchen_table.insert(&kitchen).await.expect("Failed to insert kitchen");
+        let kitchen_id = db
+            .kitchen_table
+            .insert(&kitchen)
+            .await
+            .expect("Failed to insert kitchen");
 
         let user = User {
             name: "Reviewer User".to_string(),
             unique_code: "REV001".to_string(),
             ..Default::default()
         };
-        let reviewer_id = db.user_table.insert(&user).await.expect("Failed to insert user");
+        let reviewer_id = db
+            .user_table
+            .insert(&user)
+            .await
+            .expect("Failed to insert user");
 
         let review = Review {
             kitchen_id,
@@ -376,9 +565,18 @@ mod review_tests {
             ..Default::default()
         };
 
-        let id = db.review_table.insert(&review).await.expect("Failed to insert review");
-        
-        let fetched = db.review_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .review_table
+            .insert(&review)
+            .await
+            .expect("Failed to insert review");
+
+        let fetched = db
+            .review_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.reviewer_name, "Student A");
         assert_eq!(fetched.comment, "Great food!");
     });
@@ -392,21 +590,33 @@ mod review_dispute_history_tests {
             name: "Kitchen for Dispute".to_string(),
             ..Default::default()
         };
-        let kitchen_id = db.kitchen_table.insert(&kitchen).await.expect("Failed to insert kitchen");
+        let kitchen_id = db
+            .kitchen_table
+            .insert(&kitchen)
+            .await
+            .expect("Failed to insert kitchen");
 
         let user = User {
             name: "Reviewer User Dispute".to_string(),
             unique_code: "REV002".to_string(),
             ..Default::default()
         };
-        let reviewer_id = db.user_table.insert(&user).await.expect("Failed to insert user");
+        let reviewer_id = db
+            .user_table
+            .insert(&user)
+            .await
+            .expect("Failed to insert user");
 
         let review = Review {
             kitchen_id,
             reviewer_id,
             ..Default::default()
         };
-        let review_id = db.review_table.insert(&review).await.expect("Failed to insert review");
+        let review_id = db
+            .review_table
+            .insert(&review)
+            .await
+            .expect("Failed to insert review");
 
         let history = ReviewDisputeHistory {
             review_id,
@@ -415,9 +625,18 @@ mod review_dispute_history_tests {
             ..Default::default()
         };
 
-        let id = db.review_dispute_history_table.insert(&history).await.expect("Failed to insert history");
-        
-        let fetched = db.review_dispute_history_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .review_dispute_history_table
+            .insert(&history)
+            .await
+            .expect("Failed to insert history");
+
+        let fetched = db
+            .review_dispute_history_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.action, "Dispute Opened");
         assert_eq!(fetched.notes, Some("Unfair rating".to_string()));
     });
@@ -431,7 +650,11 @@ mod performance_badge_tests {
             name: "Kitchen for Badge".to_string(),
             ..Default::default()
         };
-        let kitchen_id = db.kitchen_table.insert(&kitchen).await.expect("Failed to insert kitchen");
+        let kitchen_id = db
+            .kitchen_table
+            .insert(&kitchen)
+            .await
+            .expect("Failed to insert kitchen");
 
         let badge = PerformanceBadge {
             kitchen_id,
@@ -440,9 +663,18 @@ mod performance_badge_tests {
             ..Default::default()
         };
 
-        let id = db.performance_badge_table.insert(&badge).await.expect("Failed to insert badge");
-        
-        let fetched = db.performance_badge_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .performance_badge_table
+            .insert(&badge)
+            .await
+            .expect("Failed to insert badge");
+
+        let fetched = db
+            .performance_badge_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.title, "Top Chef");
     });
 }
@@ -458,9 +690,18 @@ mod audit_log_tests {
             ..Default::default()
         };
 
-        let id = db.audit_log_table.insert(&log).await.expect("Failed to insert log");
-        
-        let fetched = db.audit_log_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .audit_log_table
+            .insert(&log)
+            .await
+            .expect("Failed to insert log");
+
+        let fetched = db
+            .audit_log_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.action, "LOGIN");
     });
 }
@@ -476,9 +717,18 @@ mod alert_tests {
             ..Default::default()
         };
 
-        let id = db.alert_table.insert(&alert).await.expect("Failed to insert alert");
-        
-        let fetched = db.alert_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .alert_table
+            .insert(&alert)
+            .await
+            .expect("Failed to insert alert");
+
+        let fetched = db
+            .alert_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.title, "High Temp");
         assert_eq!(fetched.severity, AlertSeverity::High);
     });
@@ -495,9 +745,18 @@ mod notification_tests {
             ..Default::default()
         };
 
-        let id = db.notification_table.insert(&notification).await.expect("Failed to insert notification");
-        
-        let fetched = db.notification_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .notification_table
+            .insert(&notification)
+            .await
+            .expect("Failed to insert notification");
+
+        let fetched = db
+            .notification_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.title, "New Review");
     });
 }
@@ -510,7 +769,11 @@ mod notification_audit_trail_tests {
             title: "Audit Test".to_string(),
             ..Default::default()
         };
-        let notification_id = db.notification_table.insert(&notification).await.expect("Failed to insert notification");
+        let notification_id = db
+            .notification_table
+            .insert(&notification)
+            .await
+            .expect("Failed to insert notification");
 
         let trail = NotificationAuditTrail {
             notification_id,
@@ -519,9 +782,18 @@ mod notification_audit_trail_tests {
             ..Default::default()
         };
 
-        let id = db.notification_audit_trail_table.insert(&trail).await.expect("Failed to insert trail");
-        
-        let fetched = db.notification_audit_trail_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .notification_audit_trail_table
+            .insert(&trail)
+            .await
+            .expect("Failed to insert trail");
+
+        let fetched = db
+            .notification_audit_trail_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.action, "READ");
     });
 }
@@ -536,9 +808,18 @@ mod video_tests {
             ..Default::default()
         };
 
-        let id = db.video_table.insert(&video).await.expect("Failed to insert video");
-        
-        let fetched = db.video_table.select(&id).await.expect("Failed to select").unwrap();
+        let id = db
+            .video_table
+            .insert(&video)
+            .await
+            .expect("Failed to insert video");
+
+        let fetched = db
+            .video_table
+            .select(&id)
+            .await
+            .expect("Failed to select")
+            .unwrap();
         assert_eq!(fetched.youtube_id, "dQw4w9WgXcQ");
         assert_eq!(fetched.title, "Training Video");
     });

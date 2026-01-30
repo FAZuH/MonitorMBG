@@ -1,10 +1,11 @@
-use axum::{
-    extract::{Request, State},
-    http::{header, StatusCode},
-    middleware::Next,
-    response::Response,
-};
 use std::sync::Arc;
+
+use axum::extract::Request;
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::http::header;
+use axum::middleware::Next;
+use axum::response::Response;
 
 use crate::auth::utils::validate_token;
 use crate::config::Config;

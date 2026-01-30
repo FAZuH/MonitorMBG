@@ -19,7 +19,7 @@ tracing-appender = "0.2.4"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 uuid = { version = "1.19.0", features = ["v4", "serde"] }
 rust_decimal = { version = "1.36", features = ["db-postgres"] }
-axum = "0.8.8"
+axum = { version = "0.8.8", features = ["multipart"] }
 argon2 = "0.5.3"
 jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }
 rand = "0.9.2"

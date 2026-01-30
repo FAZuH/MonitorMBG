@@ -1,14 +1,16 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::{IntoResponse, Json},
-    routing::post,
-    Router,
-};
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::database::model::{User, UserRole};
+use axum::Router;
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::response::Json;
+use axum::routing::post;
+use serde::Deserialize;
+use serde::Serialize;
+
+use crate::database::model::User;
+use crate::database::model::UserRole;
 use crate::error::AppError;
 use crate::service::auth::AuthService;
 
@@ -49,16 +51,24 @@ pub async fn register_handler(
 
     // Input Validation
     if payload.password.len() < 8 {
-        return Err(AppError::BadRequest("Password must be at least 8 characters long".to_string()));
+        return Err(AppError::BadRequest(
+            "Password must be at least 8 characters long".to_string(),
+        ));
     }
     if payload.password.len() > 32 {
-        return Err(AppError::BadRequest("Password must be less than 32 characters long".to_string()));
+        return Err(AppError::BadRequest(
+            "Password must be less than 32 characters long".to_string(),
+        ));
     }
     if payload.unique_code.is_empty() || payload.unique_code.len() > 50 {
-        return Err(AppError::BadRequest("Unique code must be between 1 and 50 characters".to_string()));
+        return Err(AppError::BadRequest(
+            "Unique code must be between 1 and 50 characters".to_string(),
+        ));
     }
     if payload.name.is_empty() || payload.name.len() > 255 {
-        return Err(AppError::BadRequest("Name must be between 1 and 255 characters".to_string()));
+        return Err(AppError::BadRequest(
+            "Name must be between 1 and 255 characters".to_string(),
+        ));
     }
 
     let (token, user) = state
@@ -73,10 +83,7 @@ pub async fn register_handler(
         )
         .await?;
 
-    Ok((
-        StatusCode::CREATED,
-        Json(AuthResponse { token, user }),
-    ))
+    Ok((StatusCode::CREATED, Json(AuthResponse { token, user })))
 }
 
 pub async fn login_handler(

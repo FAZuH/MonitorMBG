@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use sqlx::Postgres as Db;
 use sqlx::PgPool;
+use sqlx::Postgres as Db;
 use sqlx::postgres::PgArguments as Arguments;
 use uuid::Uuid;
 
@@ -171,7 +171,10 @@ macro_rules! impl_table {
 }
 
 impl UserTable {
-    pub async fn find_by_unique_code(&self, unique_code: &str) -> Result<Option<User>, DatabaseError> {
+    pub async fn find_by_unique_code(
+        &self,
+        unique_code: &str,
+    ) -> Result<Option<User>, DatabaseError> {
         Ok(sqlx::query_as::<_, User>(
             r#"
             SELECT 
@@ -180,7 +183,7 @@ impl UserTable {
                 created_at, updated_at, password_hash
             FROM users 
             WHERE unique_code = $1
-            "#
+            "#,
         )
         .bind(unique_code)
         .fetch_optional(&self.base.pool)
@@ -302,7 +305,6 @@ impl_table!(
     ]
 );
 
-
 // ComplianceMetric Table
 impl_table!(
     ComplianceMetricTable,
@@ -359,13 +361,7 @@ impl_table!(
     "compliance_metric_id, category, item, status, notes",
     "$1, $2, $3, $4, $5",
     "compliance_metric_id=$1, category=$2, item=$3, status=$4, notes=$5 WHERE id=$6",
-    [
-        compliance_metric_id,
-        category,
-        item,
-        status,
-        notes
-    ]
+    [compliance_metric_id, category, item, status, notes]
 );
 
 // Incident Table
@@ -576,13 +572,7 @@ impl_table!(
     "complaint_id, author_id, author_name, role, message",
     "$1, $2, $3, $4, $5",
     "complaint_id=$1, author_id=$2, author_name=$3, role=$4, message=$5 WHERE id=$6",
-    [
-        complaint_id,
-        author_id,
-        author_name,
-        role,
-        message
-    ]
+    [complaint_id, author_id, author_name, role, message]
 );
 
 // Review Table
@@ -695,13 +685,7 @@ impl_table!(
     "kitchen_id, type, title, description, earned_date",
     "$1, $2, $3, $4, $5",
     "kitchen_id=$1, type=$2, title=$3, description=$4, earned_date=$5 WHERE id=$6",
-    [
-        kitchen_id,
-        r#type,
-        title,
-        description,
-        earned_date
-    ]
+    [kitchen_id, r#type, title, description, earned_date]
 );
 
 // AuditLog Table
@@ -829,12 +813,7 @@ impl_table!(
     "notification_id, timestamp, action, user_code",
     "$1, $2, $3, $4",
     "notification_id=$1, timestamp=$2, action=$3, user_code=$4 WHERE id=$5",
-    [
-        notification_id,
-        timestamp,
-        action,
-        user_code
-    ]
+    [notification_id, timestamp, action, user_code]
 );
 
 // Video Table

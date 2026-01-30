@@ -1,13 +1,16 @@
 use std::sync::Arc;
-use log::error;
-use uuid::Uuid;
 
-use crate::auth::utils::{generate_token, hash_password, verify_password};
+use log::error;
+
+use crate::auth::utils::generate_token;
+use crate::auth::utils::hash_password;
+use crate::auth::utils::verify_password;
 use crate::config::Config;
-use crate::database::error::DatabaseError;
-use crate::database::model::{User, UserRole};
-use crate::database::table::Table;
 use crate::database::Database;
+use crate::database::error::DatabaseError;
+use crate::database::model::User;
+use crate::database::model::UserRole;
+use crate::database::table::Table;
 use crate::error::AppError;
 
 #[derive(Clone)]
@@ -42,14 +45,19 @@ impl AuthService {
             ..Default::default()
         };
 
-        let user_id = self.db.user_table.insert(&user).await.map_err(|e: DatabaseError| {
-            if e.to_string().contains("duplicate key") {
-                AppError::BadRequest("User with this unique code already exists".to_string())
-            } else {
-                error!("Database error during registration: {}", e);
-                AppError::InternalServerError("An unexpected error occurred".to_string())
-            }
-        })?;
+        let user_id = self
+            .db
+            .user_table
+            .insert(&user)
+            .await
+            .map_err(|e: DatabaseError| {
+                if e.to_string().contains("duplicate key") {
+                    AppError::BadRequest("User with this unique code already exists".to_string())
+                } else {
+                    error!("Database error during registration: {}", e);
+                    AppError::InternalServerError("An unexpected error occurred".to_string())
+                }
+            })?;
 
         let created_user = self
             .db
@@ -81,7 +89,10 @@ impl AuthService {
             .find_by_unique_code(&unique_code)
             .await
             .map_err(|e| {
-                error!("Database error during login for user {}: {}", unique_code, e);
+                error!(
+                    "Database error during login for user {}: {}",
+                    unique_code, e
+                );
                 AppError::InternalServerError("Database error".to_string())
             })?;
 
@@ -91,24 +102,25 @@ impl AuthService {
             (Some(u), hash)
         } else {
             // Dummy hash for "password"
-            (None, Some("$argon2id$v=19$m=4096,t=3,p=1$c2FsdHNhbHQ$aaaaaaaaaaaaaaaaaaaaaa".to_string()))
+            (
+                None,
+                Some(
+                    "$argon2id$v=19$m=4096,t=3,p=1$c2FsdHNhbHQ$aaaaaaaaaaaaaaaaaaaaaa".to_string(),
+                ),
+            )
         };
 
         let password_valid = if let Some(hash) = stored_hash {
-            match verify_password(&password, &hash) {
-                Ok(valid) => valid,
-                Err(_) => false,
-            }
+            verify_password(&password, &hash).unwrap_or_default()
         } else {
             false
         };
 
-        if let Some(user) = user_found {
-            if password_valid {
+        if let Some(user) = user_found
+            && password_valid {
                 let token = generate_token(user.id, user.role, &self.config.jwt_secret)?;
                 return Ok((token, user));
             }
-        }
 
         Err(AppError::Unauthorized("Invalid credentials".to_string()))
     }

@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use log::debug;
 use log::info;
+use sqlx::migrate::MigrateDatabase;
 use sqlx::postgres::PgConnectOptions as ConnOpt;
 use sqlx::postgres::PgPool as Pool;
-use sqlx::migrate::MigrateDatabase;
 use sqlx::postgres::Postgres;
 
 pub mod error;

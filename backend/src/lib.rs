@@ -4,4 +4,5 @@ pub mod database;
 pub mod error;
 pub mod logging;
 pub mod middleware;
+pub mod routes;
 pub mod service;

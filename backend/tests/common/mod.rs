@@ -1,19 +1,21 @@
 use std::sync::Arc;
-use dotenv::dotenv;
-use uuid::Uuid;
-use sqlx::migrate::MigrateDatabase;
-use sqlx::postgres::Postgres;
 
 use backend::database::Database;
+use dotenv::dotenv;
+use sqlx::migrate::MigrateDatabase;
+use sqlx::postgres::Postgres;
+use uuid::Uuid;
 
 pub async fn setup_db() -> (Arc<Database>, String) {
     dotenv().ok();
     let uuid = Uuid::new_v4();
     let db_name = format!("monitor_mbg_test_{}", uuid);
     let db_url = format!("postgres://postgres:password@localhost:5432/{}", db_name);
-    
+
     // Create database
-    Postgres::create_database(&db_url).await.expect("Failed to create database");
+    Postgres::create_database(&db_url)
+        .await
+        .expect("Failed to create database");
 
     let db = Database::new(&db_url)
         .await
@@ -28,6 +30,7 @@ pub async fn setup_db() -> (Arc<Database>, String) {
 pub async fn teardown_db(db: Arc<Database>, db_name: String) {
     db.pool.close().await;
     let db_url = format!("postgres://postgres:password@localhost:5432/{}", db_name);
-    Postgres::drop_database(&db_url).await.expect("Failed to drop database");
+    Postgres::drop_database(&db_url)
+        .await
+        .expect("Failed to drop database");
 }
-

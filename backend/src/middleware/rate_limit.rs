@@ -1,16 +1,16 @@
-use axum::{
-    extract::{Request, State},
-    http::StatusCode,
-    middleware::Next,
-    response::Response,
-};
-use governor::{
-    clock::DefaultClock,
-    state::{InMemoryState, NotKeyed},
-    Quota, RateLimiter,
-};
 use std::num::NonZeroU32;
 use std::sync::Arc;
+
+use axum::extract::Request;
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::middleware::Next;
+use axum::response::Response;
+use governor::Quota;
+use governor::RateLimiter;
+use governor::clock::DefaultClock;
+use governor::state::InMemoryState;
+use governor::state::NotKeyed;
 
 #[derive(Clone)]
 pub struct RateLimitMiddleware {

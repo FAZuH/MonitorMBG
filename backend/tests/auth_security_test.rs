@@ -1,13 +1,17 @@
-use axum::{
-    body::Body,
-    http::{Request, StatusCode},
-    routing::post,
-    Router,
-};
-use backend::auth::handlers::{login_handler, register_handler, AuthState, LoginRequest, RegisterRequest};
+use std::sync::Arc;
+
+use axum::Router;
+use axum::body::Body;
+use axum::http::Request;
+use axum::http::StatusCode;
+use axum::routing::post;
 use backend::config::Config;
 use backend::database::model::UserRole;
-use std::sync::Arc;
+use backend::routes::auth::AuthState;
+use backend::routes::auth::LoginRequest;
+use backend::routes::auth::RegisterRequest;
+use backend::routes::auth::login_handler;
+use backend::routes::auth::register_handler;
 use tower::util::ServiceExt;
 
 mod common;
@@ -50,7 +54,9 @@ async fn test_auth_validation_and_security() {
                 .method("POST")
                 .uri("/register")
                 .header("Content-Type", "application/json")
-                .body(Body::from(serde_json::to_string(&weak_password_payload).unwrap()))
+                .body(Body::from(
+                    serde_json::to_string(&weak_password_payload).unwrap(),
+                ))
                 .unwrap(),
         )
         .await
@@ -76,7 +82,9 @@ async fn test_auth_validation_and_security() {
                 .method("POST")
                 .uri("/register")
                 .header("Content-Type", "application/json")
-                .body(Body::from(serde_json::to_string(&long_password_payload).unwrap()))
+                .body(Body::from(
+                    serde_json::to_string(&long_password_payload).unwrap(),
+                ))
                 .unwrap(),
         )
         .await
@@ -99,7 +107,9 @@ async fn test_auth_validation_and_security() {
                 .method("POST")
                 .uri("/login")
                 .header("Content-Type", "application/json")
-                .body(Body::from(serde_json::to_string(&non_existent_login).unwrap()))
+                .body(Body::from(
+                    serde_json::to_string(&non_existent_login).unwrap(),
+                ))
                 .unwrap(),
         )
         .await
