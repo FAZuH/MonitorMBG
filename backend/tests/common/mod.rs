@@ -28,9 +28,33 @@ pub async fn setup_db() -> (Arc<Database>, String) {
 }
 
 pub async fn teardown_db(db: Arc<Database>, db_name: String) {
+    // Close the database connection pool
     db.close().await;
+
+    // Give a moment for connections to fully close
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    // Drop the Arc to ensure the Database is dropped before we try to drop the database
+    drop(db);
+
+    // Additional small delay to ensure cleanup
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
     let db_url = format!("postgres://postgres:password@localhost:5432/{}", db_name);
-    Postgres::drop_database(&db_url)
-        .await
-        .expect("Failed to drop database");
+
+    // Try to drop the database with retry logic
+    let mut retries = 3;
+    while retries > 0 {
+        match Postgres::drop_database(&db_url).await {
+            Ok(_) => break,
+            Err(e) => {
+                retries -= 1;
+                if retries == 0 {
+                    panic!("Failed to drop database after 3 retries: {}", e);
+                }
+                // Wait a bit longer before retrying
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            }
+        }
+    }
 }
