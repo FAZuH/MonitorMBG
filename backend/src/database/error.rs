@@ -1,3 +1,6 @@
+//! Database-specific error types.
+
+/// Errors that can occur during database operations.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum DatabaseError {

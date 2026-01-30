@@ -1,3 +1,5 @@
+//! Authentication service.
+
 use std::sync::Arc;
 
 use log::error;
@@ -13,6 +15,7 @@ use crate::database::model::UserRole;
 use crate::database::table::Table;
 use crate::error::AppError;
 
+/// Service for handling authentication and user registration.
 #[derive(Clone)]
 pub struct AuthService {
     db: Arc<Database>,
@@ -20,10 +23,17 @@ pub struct AuthService {
 }
 
 impl AuthService {
+    /// Creates a new `AuthService`.
     pub fn new(db: Arc<Database>, config: Arc<Config>) -> Self {
         Self { db, config }
     }
 
+    /// Registers a new user.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AppError::BadRequest`] if the unique code is already taken.
+    /// Returns [`AppError::InternalServerError`] for database or hashing errors.
     pub async fn register_user(
         &self,
         name: String,

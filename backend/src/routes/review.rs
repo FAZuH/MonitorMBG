@@ -1,3 +1,5 @@
+//! Review and rating routes.
+
 use std::sync::Arc;
 
 use axum::Extension;
@@ -22,8 +24,10 @@ use crate::service::review::CreateReviewRequest;
 use crate::service::review::ReviewService;
 use crate::service::review::UpdateReviewRequest;
 
+/// State for review routes.
 #[derive(Clone)]
 pub struct ReviewState {
+    /// The review service.
     pub service: Arc<ReviewService>,
 }
 
@@ -54,7 +58,9 @@ pub struct BatchReviewsRequest {
     pub reviews: Vec<CreateReviewRequest>,
 }
 
+/// Handler for submitting a review.
 pub async fn submit_review_handler(
+
     State(state): State<ReviewState>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateReviewRequest>,

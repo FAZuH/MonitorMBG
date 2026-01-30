@@ -1,3 +1,5 @@
+//! Incident reporting and management service.
+
 use serde::Serialize;
 use serde_json::Value;
 use sqlx::PgPool;
@@ -93,12 +95,14 @@ pub struct Pagination {
     pub has_more: bool,
 }
 
+/// Service for handling food safety incidents and reports.
 pub struct IncidentService {
     pool: PgPool,
     incident_table: IncidentTable,
 }
 
 impl IncidentService {
+    /// Creates a new `IncidentService`.
     pub fn new(pool: PgPool) -> Self {
         Self {
             pool: pool.clone(),
@@ -106,6 +110,7 @@ impl IncidentService {
         }
     }
 
+    /// Lists incidents with optional filtering and pagination.
     pub async fn list_incidents(
         &self,
         limit: i64,

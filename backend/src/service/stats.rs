@@ -1,3 +1,5 @@
+//! Statistics and analytics service.
+
 use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -172,15 +174,18 @@ pub struct IncidentSummaryDto {
     pub trend: String,
 }
 
+/// Service for generating national and regional statistics.
 pub struct StatsService {
     pool: PgPool,
 }
 
 impl StatsService {
+    /// Creates a new `StatsService`.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
+    /// Retrieves national-level statistics.
     pub async fn get_national_stats(
         &self,
         year: Option<i32>,

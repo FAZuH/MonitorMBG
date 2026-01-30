@@ -1,3 +1,5 @@
+//! Incident reporting routes.
+
 use std::sync::Arc;
 
 use axum::Router;
@@ -13,8 +15,10 @@ use uuid::Uuid;
 use crate::error::AppError;
 use crate::service::incident::IncidentService;
 
+/// State for incident routes.
 #[derive(Clone)]
 pub struct IncidentState {
+    /// The incident service.
     pub service: Arc<IncidentService>,
 }
 
@@ -32,7 +36,9 @@ pub struct ListIncidentsQuery {
     pub min_victims: Option<i32>,
 }
 
+/// Handler for listing incidents.
 pub async fn list_incidents_handler(
+
     State(state): State<IncidentState>,
     Query(query): Query<ListIncidentsQuery>,
 ) -> Result<impl IntoResponse, AppError> {

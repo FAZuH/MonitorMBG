@@ -1,3 +1,5 @@
+//! Kitchen management routes.
+
 use std::sync::Arc;
 
 use axum::Router;
@@ -13,8 +15,10 @@ use uuid::Uuid;
 use crate::error::AppError;
 use crate::service::kitchen::KitchenService;
 
+/// State for kitchen routes.
 #[derive(Clone)]
 pub struct KitchenState {
+    /// The kitchen service.
     pub service: Arc<KitchenService>,
 }
 
@@ -34,7 +38,9 @@ pub struct BatchKitchensQuery {
     pub ids: String,
 }
 
+/// Handler for listing kitchens.
 pub async fn list_kitchens_handler(
+
     State(state): State<KitchenState>,
     Query(query): Query<ListKitchensQuery>,
 ) -> Result<impl IntoResponse, AppError> {
@@ -79,7 +85,7 @@ pub async fn get_multiple_kitchens_handler(
     let ids: Vec<Uuid> = query
         .ids
         .split(',')
-        .filter_map(|s| Uuid::parse_str(s.trim()).ok())
+        .filter_map(|s: &str| Uuid::parse_str(s.trim()).ok())
         .take(50)
         .collect();
 

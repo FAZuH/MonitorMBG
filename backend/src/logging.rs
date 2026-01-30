@@ -1,13 +1,25 @@
+//! Logging initialization and configuration.
+//!
+//! This module sets up `tracing` with both stdout and rolling file appenders.
+
 use tracing_appender::rolling::RollingFileAppender;
 use tracing_appender::rolling::Rotation;
-use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
 
 use crate::config::Config;
 use crate::error::AppError;
 
+/// Initializes the logging system.
+///
+/// Sets up a rolling file appender and a stdout appender using `tracing-subscriber`.
+///
+/// # Errors
+///
+/// Returns [`AppError::ConfigurationError`] if the logs directory cannot be created
+/// or if the file appender fails to initialize.
 pub fn setup_logging(config: &Config) -> Result<(), AppError> {
     // Create logs directory if it doesn't exist
     std::fs::create_dir_all(&config.logs_path).map_err(|e| AppError::ConfigurationError {

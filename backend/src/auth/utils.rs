@@ -1,18 +1,20 @@
+//! Authentication utilities for password hashing and JWT management.
+
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
-use argon2::Argon2;
+use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::PasswordHash;
 use argon2::password_hash::PasswordHasher;
 use argon2::password_hash::PasswordVerifier;
 use argon2::password_hash::SaltString;
-use argon2::password_hash::rand_core::OsRng;
+use argon2::Argon2;
+use jsonwebtoken::decode;
+use jsonwebtoken::encode;
 use jsonwebtoken::DecodingKey;
 use jsonwebtoken::EncodingKey;
 use jsonwebtoken::Header;
 use jsonwebtoken::Validation;
-use jsonwebtoken::decode;
-use jsonwebtoken::encode;
 use serde::Deserialize;
 use serde::Serialize;
 use uuid::Uuid;
@@ -20,14 +22,24 @@ use uuid::Uuid;
 use crate::database::model::UserRole;
 use crate::error::AppError;
 
+/// JWT claims structure.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
+    /// Subject (user ID).
     pub sub: Uuid,
+    /// User role.
     pub role: UserRole,
+    /// Expiration timestamp.
     pub exp: usize,
+    /// Issued-at timestamp.
     pub iat: usize,
 }
 
+/// Hashes a password using Argon2.
+///
+/// # Errors
+///
+/// Returns [`AppError::InternalServerError`] if hashing fails.
 pub fn hash_password(password: &str) -> Result<String, AppError> {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
@@ -51,7 +63,7 @@ pub fn generate_token(user_id: Uuid, role: UserRole, secret: &str) -> Result<Str
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs() as usize;
-    let expiration = now + 3600; // 1 hour 
+    let expiration = now + 3600; // 1 hour
 
     let claims = Claims {
         sub: user_id,

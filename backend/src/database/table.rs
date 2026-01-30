@@ -1,3 +1,8 @@
+//! Generic and specific table implementations.
+//!
+//! This module defines the [`Table`] trait and provides a macro for implementing
+//! standard CRUD operations for database tables.
+
 use async_trait::async_trait;
 use sqlx::PgPool;
 use sqlx::Postgres as Db;
@@ -20,20 +25,31 @@ impl BaseTable {
     }
 }
 
+/// Base trait for all database tables.
 #[async_trait]
 pub trait TableBase {
+    /// Creates the table in the database.
     async fn create_table(&self) -> Result<(), DatabaseError>;
+    /// Drops the table from the database.
     async fn drop_table(&self) -> Result<(), DatabaseError>;
+    /// Deletes all records from the table.
     async fn delete_all(&self) -> Result<(), DatabaseError>;
 }
 
+/// Generic trait for CRUD operations on a database table.
 #[async_trait]
 pub trait Table<T, ID>: TableBase {
+    /// Selects all records from the table.
     async fn select_all(&self) -> Result<Vec<T>, DatabaseError>;
+    /// Inserts a new record into the table.
     async fn insert(&self, model: &T) -> Result<ID, DatabaseError>;
+    /// Selects a record by its ID.
     async fn select(&self, id: &ID) -> Result<Option<T>, DatabaseError>;
+    /// Updates an existing record in the table.
     async fn update(&self, model: &T) -> Result<(), DatabaseError>;
+    /// Deletes a record by its ID.
     async fn delete(&self, id: &ID) -> Result<(), DatabaseError>;
+    /// Replaces a record (not supported in Postgres).
     async fn replace(&self, model: &T) -> Result<ID, DatabaseError>;
 }
 

@@ -1,3 +1,5 @@
+//! Review and rating service.
+
 use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
 use serde::Deserialize;
@@ -110,12 +112,14 @@ pub struct BatchReviewResponse {
     pub results: Vec<BatchReviewResult>,
 }
 
+/// Service for managing kitchen reviews and ratings.
 pub struct ReviewService {
     pool: PgPool,
     review_table: ReviewTable,
 }
 
 impl ReviewService {
+    /// Creates a new `ReviewService`.
     pub fn new(pool: PgPool) -> Self {
         Self {
             pool: pool.clone(),
@@ -123,6 +127,7 @@ impl ReviewService {
         }
     }
 
+    /// Submits a new review for a kitchen.
     pub async fn submit_review(
         &self,
         reviewer_id: Uuid,

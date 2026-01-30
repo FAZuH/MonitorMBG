@@ -1,3 +1,8 @@
+//! MonitorMBG Backend Application
+//!
+//! This is the entry point for the MonitorMBG backend server.
+//! It initializes configuration, logging, database connections, and starts the Axum server.
+
 use std::sync::Arc;
 use std::time::Instant;
 

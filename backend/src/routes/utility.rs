@@ -1,3 +1,5 @@
+//! Utility routes including health checks and file uploads.
+
 use std::sync::Arc;
 
 use axum::Router;
@@ -14,11 +16,14 @@ use crate::auth::middleware::auth_middleware;
 use crate::error::AppError;
 use crate::service::utility::UtilityService;
 
+/// State for utility routes.
 #[derive(Clone)]
 pub struct UtilityState {
+    /// The utility service.
     pub service: Arc<UtilityService>,
 }
 
+/// Handler for system health check.
 pub async fn health_check_handler(
     State(state): State<UtilityState>,
 ) -> Result<impl IntoResponse, AppError> {

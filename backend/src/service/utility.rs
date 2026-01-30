@@ -1,3 +1,5 @@
+//! Utility services including file uploads and health checks.
+
 use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -50,15 +52,18 @@ pub struct ServicesHealth {
     pub whatsapp: String,
 }
 
+/// Service for utility operations like image uploads and system health.
 pub struct UtilityService {
     pool: PgPool,
 }
 
 impl UtilityService {
+    /// Creates a new `UtilityService`.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 
+    /// Uploads an image to the storage system.
     pub async fn upload_image(
         &self,
         file_name: String,

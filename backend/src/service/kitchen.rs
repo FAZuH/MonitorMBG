@@ -1,3 +1,5 @@
+//! Kitchen management service.
+
 use serde::Serialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -110,6 +112,7 @@ pub struct ReviewDistributionDto {
     pub one: i32,
 }
 
+/// Service for managing kitchen data and statistics.
 pub struct KitchenService {
     pool: PgPool,
     kitchen_table: KitchenTable,
@@ -117,6 +120,7 @@ pub struct KitchenService {
 }
 
 impl KitchenService {
+    /// Creates a new `KitchenService`.
     pub fn new(pool: PgPool) -> Self {
         Self {
             pool: pool.clone(),
@@ -125,6 +129,7 @@ impl KitchenService {
         }
     }
 
+    /// Lists kitchens with optional filtering and pagination.
     pub async fn list_kitchens(
         &self,
         limit: i64,

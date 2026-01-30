@@ -1,3 +1,5 @@
+//! Rate limiting middleware.
+
 use std::num::NonZeroU32;
 use std::sync::Arc;
 
@@ -12,12 +14,14 @@ use governor::clock::DefaultClock;
 use governor::state::InMemoryState;
 use governor::state::NotKeyed;
 
+/// State for the rate limiting middleware.
 #[derive(Clone)]
 pub struct RateLimitMiddleware {
     limiter: Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>,
 }
 
 impl RateLimitMiddleware {
+    /// Creates a new rate limiter with the specified requests per second.
     pub fn new(requests_per_second: u32) -> Self {
         let quota = Quota::per_second(NonZeroU32::new(requests_per_second).unwrap());
         let limiter = Arc::new(RateLimiter::direct(quota));

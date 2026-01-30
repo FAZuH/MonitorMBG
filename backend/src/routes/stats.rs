@@ -1,3 +1,5 @@
+//! Statistics and analytics routes.
+
 use std::sync::Arc;
 
 use axum::Router;
@@ -12,8 +14,10 @@ use uuid::Uuid;
 use crate::error::AppError;
 use crate::service::stats::StatsService;
 
+/// State for statistics routes.
 #[derive(Clone)]
 pub struct StatsState {
+    /// The statistics service.
     pub service: Arc<StatsService>,
 }
 
@@ -48,7 +52,9 @@ pub struct IncidentTrendsQuery {
     pub group_by: Option<String>,
 }
 
+/// Handler for getting national statistics.
 pub async fn get_national_stats_handler(
+
     State(state): State<StatsState>,
     Query(query): Query<NationalStatsQuery>,
 ) -> Result<impl IntoResponse, AppError> {

@@ -1,3 +1,5 @@
+//! Authentication middleware.
+
 use std::sync::Arc;
 
 use axum::extract::Request;
@@ -10,11 +12,17 @@ use axum::response::Response;
 use crate::auth::utils::validate_token;
 use crate::config::Config;
 
+/// State for the authentication middleware.
 #[derive(Clone)]
 pub struct AuthState {
+    /// Application configuration, containing the JWT secret.
     pub config: Arc<Config>,
 }
 
+/// Middleware that validates the JWT in the `Authorization` header.
+///
+/// If the token is valid, the [`Claims`] are inserted into the request extensions.
+/// Otherwise, it returns `401 Unauthorized`.
 pub async fn auth_middleware(
     State(state): State<AuthState>,
     mut req: Request,

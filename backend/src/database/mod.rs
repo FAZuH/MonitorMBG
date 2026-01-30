@@ -1,3 +1,8 @@
+//! Database management and connection pooling.
+//!
+//! This module provides the central [`Database`] struct which manages the connection pool
+//! and all table-specific data access objects.
+
 use std::str::FromStr;
 
 use log::debug;
@@ -13,30 +18,58 @@ pub mod table;
 
 use table::*;
 
+/// Central database manager.
+///
+/// Holds the connection pool and all table-specific DAOs.
 pub struct Database {
+    /// The underlying SQLx connection pool.
     pub pool: Pool,
+    /// Table for institution data.
     pub institution_table: InstitutionTable,
+    /// Table for user data.
     pub user_table: UserTable,
+    /// Table for kitchen data.
     pub kitchen_table: KitchenTable,
+    /// Table for compliance metrics.
     pub compliance_metric_table: ComplianceMetricTable,
+    /// Table for checklist items.
     pub checklist_item_table: ChecklistItemTable,
+    /// Table for incident reports.
     pub incident_table: IncidentTable,
+    /// Table for inspection records.
     pub inspection_table: InspectionTable,
+    /// Table for inspection findings.
     pub inspection_finding_table: InspectionFindingTable,
+    /// Table for complaints.
     pub complaint_table: ComplaintTable,
+    /// Table for complaint evidence.
     pub complaint_evidence_table: ComplaintEvidenceTable,
+    /// Table for complaint comments.
     pub complaint_comment_table: ComplaintCommentTable,
+    /// Table for reviews.
     pub review_table: ReviewTable,
+    /// Table for review dispute history.
     pub review_dispute_history_table: ReviewDisputeHistoryTable,
+    /// Table for performance badges.
     pub performance_badge_table: PerformanceBadgeTable,
+    /// Table for audit logs.
     pub audit_log_table: AuditLogTable,
+    /// Table for alerts.
     pub alert_table: AlertTable,
+    /// Table for notifications.
     pub notification_table: NotificationTable,
+    /// Table for notification audit trails.
     pub notification_audit_trail_table: NotificationAuditTrailTable,
+    /// Table for video data.
     pub video_table: VideoTable,
 }
 
 impl Database {
+    /// Creates a new `Database` instance and connects to the database.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the connection fails or if the database cannot be created.
     pub async fn new(db_url: &str) -> anyhow::Result<Self> {
         debug!("Connecting to db...");
         Self::create_db(db_url).await?;
@@ -89,6 +122,11 @@ impl Database {
         })
     }
 
+    /// Runs database migrations.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if migrations fail.
     pub async fn run_migrations(&self) -> anyhow::Result<()> {
         sqlx::migrate!("./migrations").run(&self.pool).await?;
         Ok(())

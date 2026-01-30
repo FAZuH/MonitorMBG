@@ -1,3 +1,5 @@
+//! Authentication routes.
+
 use std::sync::Arc;
 
 use axum::Router;
@@ -14,8 +16,10 @@ use crate::database::model::UserRole;
 use crate::error::AppError;
 use crate::service::auth::AuthService;
 
+/// State for authentication routes.
 #[derive(Clone)]
 pub struct AuthState {
+    /// The authentication service.
     pub service: Arc<AuthService>,
 }
 
@@ -41,7 +45,9 @@ pub struct AuthResponse {
     pub user: User,
 }
 
+/// Handler for user registration.
 pub async fn register_handler(
+
     State(state): State<AuthState>,
     Json(mut payload): Json<RegisterRequest>,
 ) -> Result<impl IntoResponse, AppError> {

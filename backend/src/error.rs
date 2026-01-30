@@ -1,29 +1,42 @@
+//! Error handling for the application.
+//!
+//! This module defines the central [`AppError`] enum used throughout the backend.
+
 use crate::database::error::DatabaseError;
 
+/// Central error type for the application.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum AppError {
+    /// An assertion failed.
     #[error("Assertion error: {msg}")]
     AssertionError { msg: String },
 
+    /// A required configuration value is missing.
     #[error("Missing config \"{config}\"")]
     MissingConfig { config: String },
 
+    /// An error occurred during application configuration.
     #[error("Error in app configuration: {msg}")]
     ConfigurationError { msg: String },
 
+    /// An internal server error occurred.
     #[error("Internal Server Error: {0}")]
     InternalServerError(String),
 
+    /// The user is not authorized to perform the action.
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
 
+    /// The user is forbidden from performing the action.
     #[error("Forbidden: {0}")]
     Forbidden(String),
 
+    /// The request was invalid.
     #[error("Bad Request: {0}")]
     BadRequest(String),
 
+    /// The requested resource was not found.
     #[error("Not Found: {0}")]
     NotFound(String),
 }

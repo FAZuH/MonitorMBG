@@ -1,3 +1,7 @@
+//! Database models and enums.
+//!
+//! This module contains structs representing database tables and enums for various fields.
+
 use chrono::NaiveDate;
 use chrono::NaiveDateTime;
 use rust_decimal::Decimal;
@@ -8,12 +12,17 @@ use uuid::Uuid;
 
 // Enums
 
+/// Roles for users in the system.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
 #[sqlx(type_name = "user_role_enum", rename_all = "lowercase")]
 pub enum UserRole {
+    /// Kitchen staff or manager.
     Kitchen,
+    /// Food supplier.
     Supplier,
+    /// School representative.
     School,
+    /// System administrator.
     Admin,
 }
 
@@ -191,21 +200,35 @@ impl Default for Institution {
     }
 }
 
+/// Represents a user in the system.
 #[derive(FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct User {
+    /// Unique identifier for the user.
     #[serde(default)]
     pub id: Uuid,
+    /// Full name of the user.
     pub name: String,
+    /// Role of the user.
     pub role: UserRole,
+    /// Unique code used for identification/login.
     pub unique_code: String,
+    /// Phone number of the user.
     pub phone: Option<String>,
+    /// Whether the user's account is verified.
     pub verified: Option<bool>,
+    /// Name of the institution the user belongs to.
     pub institution_name: Option<String>,
+    /// ID of the institution the user belongs to.
     pub institution_id: Option<Uuid>,
+    /// Hashed password for authentication.
     pub password_hash: Option<String>,
+    /// Hash of the user's KTP (ID card) photo.
     pub ktp_photo_hash: Option<String>,
+    /// Timestamp of the last login.
     pub last_login: Option<NaiveDateTime>,
+    /// Timestamp when the user was created.
     pub created_at: Option<NaiveDateTime>,
+    /// Timestamp when the user was last updated.
     pub updated_at: Option<NaiveDateTime>,
 }
 
