@@ -39,6 +39,14 @@ pub enum AppError {
     /// The requested resource was not found.
     #[error("Not Found: {0}")]
     NotFound(String),
+
+    /// The service is temporarily unavailable.
+    #[error("Service Unavailable: {0}")]
+    ServiceUnavailable(String),
+
+    /// Too many requests (rate limiting).
+    #[error("Too Many Requests: {0}")]
+    TooManyRequests(String),
 }
 
 impl axum::response::IntoResponse for AppError {
@@ -48,6 +56,8 @@ impl axum::response::IntoResponse for AppError {
             AppError::Forbidden(msg) => (axum::http::StatusCode::FORBIDDEN, msg),
             AppError::BadRequest(msg) => (axum::http::StatusCode::BAD_REQUEST, msg),
             AppError::NotFound(msg) => (axum::http::StatusCode::NOT_FOUND, msg),
+            AppError::ServiceUnavailable(msg) => (axum::http::StatusCode::SERVICE_UNAVAILABLE, msg),
+            AppError::TooManyRequests(msg) => (axum::http::StatusCode::TOO_MANY_REQUESTS, msg),
             AppError::InternalServerError(msg) => {
                 (axum::http::StatusCode::INTERNAL_SERVER_ERROR, msg)
             }

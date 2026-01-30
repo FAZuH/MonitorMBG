@@ -6,7 +6,9 @@
 pub mod auth;
 pub mod incident;
 pub mod kitchen;
+pub mod otp;
 pub mod review;
 pub mod stats;
 pub mod storage;
 pub mod utility;
+pub mod whatsapp;

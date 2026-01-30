@@ -17,6 +17,7 @@ use tower::util::ServiceExt;
 mod common;
 
 use backend::service::auth::AuthService;
+use backend::service::otp::OtpService;
 
 #[tokio::test]
 async fn test_auth_validation_and_security() {
@@ -27,9 +28,11 @@ async fn test_auth_validation_and_security() {
     });
 
     let auth_service = Arc::new(AuthService::new(db.clone(), config.clone()));
+    let otp_service = Arc::new(OtpService::new(config.clone()));
 
     let state = AuthState {
         service: auth_service,
+        otp_service,
     };
 
     let app = Router::new()

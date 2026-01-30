@@ -21,8 +21,11 @@ export function RegistrationPage({ onBack, onComplete }: RegistrationPageProps) 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [cameraActive, setCameraActive] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+  const [otpReferenceId, setOtpReferenceId] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
   const validateStep = (stepNumber: number): boolean => {
     const newErrors: Record<string, string> = {};
@@ -103,15 +106,66 @@ export function RegistrationPage({ onBack, onComplete }: RegistrationPageProps) 
     }
   };
 
-  const sendOTP = () => {
-    // Simulate sending OTP
-    setOtpSent(true);
-    // In real app, this would call an API to send OTP to the phone number
+  const sendOTP = async () => {
+    setOtpLoading(true);
+    setErrors({});
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/otp/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone: formData.phone }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send OTP');
+      }
+
+      const data = await response.json();
+      setOtpReferenceId(data.referenceId);
+      setOtpSent(true);
+    } catch (err) {
+      setErrors({ otp: err instanceof Error ? err.message : 'Failed to send OTP' });
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
-  const handleSubmit = () => {
-    if (validateStep(4)) {
-      onComplete(formData);
+  const handleSubmit = async () => {
+    if (!validateStep(4)) {
+      return;
+    }
+
+    // Verify OTP before completing registration
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: formData.phone,
+          code: formData.otpCode,
+          referenceId: otpReferenceId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Invalid OTP code');
+      }
+
+      const data = await response.json();
+      if (data.verified) {
+        onComplete(formData);
+      } else {
+        setErrors({ otp: 'Invalid OTP code' });
+      }
+    } catch (err) {
+      setErrors({ otp: err instanceof Error ? err.message : 'Failed to verify OTP' });
     }
   };
 
@@ -362,11 +416,13 @@ export function RegistrationPage({ onBack, onComplete }: RegistrationPageProps) 
                 </label>
                 {!otpSent ? (
                   <button
+                    type="button"
                     onClick={sendOTP}
-                    className="w-full bg-green-600 text-white py-3 rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                    disabled={otpLoading}
+                    className="w-full bg-green-600 text-white py-3 rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Phone className="size-5" />
-                    Kirim Kode OTP ke {formData.phone}
+                    {otpLoading ? 'Mengirim...' : `Kirim Kode OTP ke ${formData.phone}`}
                   </button>
                 ) : (
                   <div className="space-y-3">

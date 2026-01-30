@@ -17,6 +17,7 @@ use tower::util::ServiceExt;
 mod common;
 
 use backend::service::auth::AuthService;
+use backend::service::otp::OtpService;
 
 #[tokio::test]
 async fn test_register_and_login_success() {
@@ -28,8 +29,10 @@ async fn test_register_and_login_success() {
 
     let auth_service = Arc::new(AuthService::new(db.clone(), config.clone()));
 
+    let otp_service = Arc::new(OtpService::new(config.clone()));
     let state = AuthState {
         service: auth_service,
+        otp_service,
     };
 
     let app = Router::new()
@@ -121,8 +124,10 @@ async fn test_register_duplicate_unique_code() {
 
     let auth_service = Arc::new(AuthService::new(db.clone(), config.clone()));
 
+    let otp_service = Arc::new(OtpService::new(config.clone()));
     let state = AuthState {
         service: auth_service,
+        otp_service,
     };
 
     let app = Router::new()
@@ -196,8 +201,10 @@ async fn test_register_validation_errors() {
 
     let auth_service = Arc::new(AuthService::new(db.clone(), config.clone()));
 
+    let otp_service = Arc::new(OtpService::new(config.clone()));
     let state = AuthState {
         service: auth_service,
+        otp_service,
     };
 
     let app = Router::new()
@@ -325,8 +332,10 @@ async fn test_login_nonexistent_user() {
 
     let auth_service = Arc::new(AuthService::new(db.clone(), config.clone()));
 
+    let otp_service = Arc::new(OtpService::new(config.clone()));
     let state = AuthState {
         service: auth_service,
+        otp_service,
     };
 
     let app = Router::new()
@@ -366,8 +375,10 @@ async fn test_register_different_roles() {
 
     let auth_service = Arc::new(AuthService::new(db.clone(), config.clone()));
 
+    let otp_service = Arc::new(OtpService::new(config.clone()));
     let state = AuthState {
         service: auth_service,
+        otp_service,
     };
 
     let app = Router::new()
@@ -426,8 +437,10 @@ async fn test_register_input_sanitization() {
 
     let auth_service = Arc::new(AuthService::new(db.clone(), config.clone()));
 
+    let otp_service = Arc::new(OtpService::new(config.clone()));
     let state = AuthState {
         service: auth_service,
+        otp_service,
     };
 
     let app = Router::new()

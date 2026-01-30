@@ -25,6 +25,23 @@ pub struct StorageConfig {
     pub base_url: Option<String>,
 }
 
+/// WhatsApp configuration for OTP delivery.
+#[derive(Clone, Default)]
+pub struct WhatsAppConfig {
+    /// Whether WhatsApp OTP is enabled.
+    pub enabled: bool,
+    /// WhatsApp Business API endpoint URL.
+    pub api_url: Option<String>,
+    /// WhatsApp Business API token.
+    pub api_token: Option<String>,
+    /// WhatsApp Business phone number ID.
+    pub phone_number_id: Option<String>,
+    /// OTP code expiration time in seconds (default: 300).
+    pub otp_expiry_seconds: u64,
+    /// Maximum OTP attempts per reference (default: 5).
+    pub max_attempts: u32,
+}
+
 /// Application configuration structure.
 #[derive(Clone, Default)]
 pub struct Config {
@@ -40,6 +57,8 @@ pub struct Config {
     pub port: u16,
     /// Storage configuration for file uploads.
     pub storage: StorageConfig,
+    /// WhatsApp configuration for OTP delivery.
+    pub whatsapp: WhatsAppConfig,
 }
 
 impl Config {
@@ -85,6 +104,27 @@ impl Config {
             secret_key: std::env::var("STORAGE_S3_SECRET_KEY").ok(),
             endpoint: std::env::var("STORAGE_S3_ENDPOINT").ok(),
             base_url: std::env::var("STORAGE_BASE_URL").ok(),
+        };
+
+        // Load WhatsApp configuration
+        let whatsapp_enabled = std::env::var("WHATSAPP_ENABLED")
+            .unwrap_or("false".to_string())
+            .to_lowercase()
+            == "true";
+
+        self.whatsapp = WhatsAppConfig {
+            enabled: whatsapp_enabled,
+            api_url: std::env::var("WHATSAPP_API_URL").ok(),
+            api_token: std::env::var("WHATSAPP_API_TOKEN").ok(),
+            phone_number_id: std::env::var("WHATSAPP_PHONE_NUMBER_ID").ok(),
+            otp_expiry_seconds: std::env::var("WHATSAPP_OTP_EXPIRY_SECONDS")
+                .unwrap_or("300".to_string())
+                .parse()
+                .unwrap_or(300),
+            max_attempts: std::env::var("WHATSAPP_MAX_ATTEMPTS")
+                .unwrap_or("5".to_string())
+                .parse()
+                .unwrap_or(5),
         };
 
         Ok(())

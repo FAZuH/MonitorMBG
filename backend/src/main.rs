@@ -28,6 +28,7 @@ use backend::routes::utility::utility_routes;
 use backend::service::auth::AuthService;
 use backend::service::incident::IncidentService;
 use backend::service::kitchen::KitchenService;
+use backend::service::otp::OtpService;
 use backend::service::review::ReviewService;
 use backend::service::stats::StatsService;
 use backend::service::storage::StorageService;
@@ -94,6 +95,7 @@ fn setup_routes(config: Arc<Config>, db: Arc<Database>) -> Router {
 
     // Setup Services
     let auth_service = Arc::new(AuthService::new(db.clone(), config.clone()));
+    let otp_service = Arc::new(OtpService::new(config.clone()));
     let kitchen_service = Arc::new(KitchenService::new(db.clone()));
     let review_service = Arc::new(ReviewService::new(db.clone()));
     let incident_service = Arc::new(IncidentService::new(db.clone()));
@@ -103,6 +105,7 @@ fn setup_routes(config: Arc<Config>, db: Arc<Database>) -> Router {
     // Setup States
     let auth_state = AuthState {
         service: auth_service,
+        otp_service,
     };
     let kitchen_state = KitchenState {
         service: kitchen_service,

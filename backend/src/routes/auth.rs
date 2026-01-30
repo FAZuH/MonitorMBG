@@ -15,12 +15,15 @@ use crate::database::model::User;
 use crate::database::model::UserRole;
 use crate::error::AppError;
 use crate::service::auth::AuthService;
+use crate::service::otp::OtpService;
 
 /// State for authentication routes.
 #[derive(Clone)]
 pub struct AuthState {
     /// The authentication service.
     pub service: Arc<AuthService>,
+    /// The OTP service for phone verification.
+    pub otp_service: Arc<OtpService>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -43,6 +46,40 @@ pub struct LoginRequest {
 pub struct AuthResponse {
     pub token: String,
     pub user: User,
+}
+
+/// Request to send OTP to a phone number.
+#[derive(Deserialize)]
+pub struct SendOtpRequest {
+    pub phone: String,
+}
+
+/// Response after sending OTP.
+#[derive(Serialize)]
+pub struct SendOtpResponse {
+    pub success: bool,
+    pub message: String,
+    #[serde(rename = "referenceId")]
+    pub reference_id: String,
+    #[serde(rename = "expiresIn")]
+    pub expires_in: u64,
+}
+
+/// Request to verify an OTP code.
+#[derive(Deserialize)]
+pub struct VerifyOtpRequest {
+    pub phone: String,
+    pub code: String,
+    #[serde(rename = "referenceId")]
+    pub reference_id: String,
+}
+
+/// Response after verifying OTP.
+#[derive(Serialize)]
+pub struct VerifyOtpResponse {
+    pub success: bool,
+    pub message: String,
+    pub verified: bool,
 }
 
 /// Handler for user registration.
@@ -111,9 +148,53 @@ pub async fn login_handler(
     Ok(Json(AuthResponse { token, user }))
 }
 
+/// Handler for sending OTP to a phone number.
+pub async fn send_otp_handler(
+    State(state): State<AuthState>,
+    Json(payload): Json<SendOtpRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let phone = payload.phone.trim().to_string();
+
+    let (reference_id, expires_in) = state.otp_service.send_otp(phone).await?;
+
+    Ok(Json(SendOtpResponse {
+        success: true,
+        message: "OTP sent via WhatsApp".to_string(),
+        reference_id,
+        expires_in,
+    }))
+}
+
+/// Handler for verifying an OTP code.
+pub async fn verify_otp_handler(
+    State(state): State<AuthState>,
+    Json(payload): Json<VerifyOtpRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let phone = payload.phone.trim().to_string();
+    let code = payload.code.trim().to_string();
+    let reference_id = payload.reference_id.trim().to_string();
+
+    let verified = state
+        .otp_service
+        .verify_otp(&reference_id, &phone, &code)
+        .await?;
+
+    if verified {
+        Ok(Json(VerifyOtpResponse {
+            success: true,
+            message: "Phone verified successfully".to_string(),
+            verified: true,
+        }))
+    } else {
+        Err(AppError::BadRequest("Invalid OTP code".to_string()))
+    }
+}
+
 pub fn auth_routes(state: AuthState) -> Router {
     Router::new()
         .route("/register", post(register_handler))
         .route("/login", post(login_handler))
+        .route("/otp/send", post(send_otp_handler))
+        .route("/otp/verify", post(verify_otp_handler))
         .with_state(state)
 }
