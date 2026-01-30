@@ -1,15 +1,16 @@
 //! Incident reporting and management service.
 
+use std::sync::Arc;
+
 use serde::Serialize;
 use serde_json::Value;
-use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::database::Database;
 use crate::database::model::Incident;
 use crate::database::model::IncidentSeverity;
 use crate::database::model::IncidentSource;
 use crate::database::model::IncidentStatus;
-use crate::database::table::IncidentTable;
 use crate::database::table::Table;
 use crate::error::AppError;
 
@@ -17,14 +18,14 @@ use crate::error::AppError;
 pub struct IncidentDto {
     pub id: Uuid,
     pub location: Option<String>,
-    pub address: Option<String>, // Not in DB model, will mock or derive
+    pub address: Option<String>,
     pub province: Option<String>,
-    pub kabupaten: Option<String>, // Not in DB model
+    pub kabupaten: Option<String>,
     pub date: String,
     #[serde(rename = "victims")]
     pub affected_count: i32,
     pub deaths: i32,
-    pub hospitalized: i32, // Not in DB model
+    pub hospitalized: i32,
     pub cause: Option<String>,
     pub status: Option<IncidentStatus>,
     pub severity: IncidentSeverity,
@@ -37,7 +38,7 @@ pub struct IncidentDto {
     #[serde(rename = "updatedAt")]
     pub updated_at: String,
     #[serde(rename = "resolvedAt")]
-    pub resolved_at: Option<String>, // Not in DB model
+    pub resolved_at: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -51,7 +52,7 @@ pub struct IncidentDetailDto {
     #[serde(flatten)]
     pub incident: IncidentDto,
     #[serde(rename = "relatedKitchenName")]
-    pub related_kitchen_name: Option<String>, // Need to fetch kitchen
+    pub related_kitchen_name: Option<String>,
     pub description: Option<String>,
     pub timeline: Vec<TimelineEventDto>,
     #[serde(rename = "affectedInstitutions")]
@@ -97,17 +98,13 @@ pub struct Pagination {
 
 /// Service for handling food safety incidents and reports.
 pub struct IncidentService {
-    pool: PgPool,
-    incident_table: IncidentTable,
+    db: Arc<Database>,
 }
 
 impl IncidentService {
     /// Creates a new `IncidentService`.
-    pub fn new(pool: PgPool) -> Self {
-        Self {
-            pool: pool.clone(),
-            incident_table: IncidentTable::new(pool),
-        }
+    pub fn new(db: Arc<Database>) -> Self {
+        Self { db }
     }
 
     /// Lists incidents with optional filtering and pagination.
@@ -117,41 +114,23 @@ impl IncidentService {
         offset: i64,
         status: Option<String>,
         province: Option<String>,
-        date_from: Option<String>,
-        date_to: Option<String>,
+        _date_from: Option<String>,
+        _date_to: Option<String>,
         min_victims: Option<i32>,
     ) -> Result<IncidentListResponse, AppError> {
-        // TODO: Implement filtering in DB
-        let all_incidents = self.incident_table.select_all().await?;
+        let (incidents, total) = self
+            .db
+            .incident_table
+            .list_incidents(
+                status.as_deref(),
+                province.as_deref(),
+                min_victims,
+                limit,
+                offset,
+            )
+            .await?;
 
-        let mut filtered: Vec<Incident> = all_incidents;
-
-        if let Some(s) = status {
-            // Simple string matching for now, ideally enum parsing
-            // filtered.retain(|i| i.status.map(|st| format!("{:?}", st).to_lowercase()) == Some(s.to_lowercase()));
-        }
-
-        if let Some(p) = province {
-            filtered.retain(|i| {
-                i.province
-                    .as_ref()
-                    .map(|pr| pr.to_lowercase().contains(&p.to_lowercase()))
-                    .unwrap_or(false)
-            });
-        }
-
-        if let Some(mv) = min_victims {
-            filtered.retain(|i| i.affected_count.unwrap_or(0) >= mv);
-        }
-
-        let total = filtered.len() as i64;
-        let paginated: Vec<Incident> = filtered
-            .into_iter()
-            .skip(offset as usize)
-            .take(limit as usize)
-            .collect();
-
-        let dtos = paginated.into_iter().map(|i| self.map_to_dto(i)).collect();
+        let dtos = incidents.into_iter().map(|i| self.map_to_dto(i)).collect();
 
         Ok(IncidentListResponse {
             data: dtos,
@@ -166,22 +145,73 @@ impl IncidentService {
 
     pub async fn get_incident_detail(&self, id: Uuid) -> Result<IncidentDetailDto, AppError> {
         let incident = self
+            .db
             .incident_table
             .select(&id)
             .await?
             .ok_or(AppError::NotFound("Incident not found".into()))?;
 
-        let dto = self.map_to_dto(incident.clone());
+        // Get kitchen name
+        let kitchen_name = self
+            .db
+            .kitchen_table
+            .get_kitchen_name(&incident.kitchen_id)
+            .await?;
+
+        // Get timeline events
+        let timeline_events = self
+            .db
+            .incident_table
+            .get_timeline_events(&id)
+            .await?;
+
+        let timeline = timeline_events
+            .into_iter()
+            .map(|e| TimelineEventDto {
+                date: e.event_date.to_string(),
+                event: e.event_title,
+                description: e.description.unwrap_or_default(),
+            })
+            .collect();
+
+        // Get lab results
+        let lab_results = self
+            .db
+            .incident_table
+            .get_lab_results(&id)
+            .await?;
+
+        let laboratory_results = lab_results.map(|lr| LaboratoryResultsDto {
+            pathogen: lr.pathogen,
+            test_date: lr.test_date.to_string(),
+            confirmed_by: lr.confirmed_by,
+        });
+
+        // Get affected institutions
+        let affected_institutions = self
+            .db
+            .incident_table
+            .get_affected_institutions(&id)
+            .await?;
+
+        // Get corrective actions
+        let corrective_actions = self
+            .db
+            .incident_table
+            .get_corrective_actions(&id)
+            .await?;
+
+        let dto = self.map_to_dto(incident);
 
         Ok(IncidentDetailDto {
             incident: dto,
-            related_kitchen_name: Some("Unknown Kitchen".to_string()), // TODO: Fetch kitchen name
-            description: incident.description,
-            timeline: vec![],              // Mock
-            affected_institutions: vec![], // Mock
-            laboratory_results: None,      // Mock
-            corrective_actions: vec![],    // Mock
-            source_url: None,              // Mock
+            related_kitchen_name: kitchen_name,
+            description: None, // Not in base incident model
+            timeline,
+            affected_institutions,
+            laboratory_results,
+            corrective_actions,
+            source_url: None, // Not in base incident model
         })
     }
 
@@ -204,13 +234,13 @@ impl IncidentService {
         IncidentDto {
             id: i.id,
             location: i.location,
-            address: None, // Mock
+            address: None, // Will be populated from kitchen in detail view
             province: i.province,
-            kabupaten: None, // Mock
+            kabupaten: None, // Will be populated from kitchen in detail view
             date: i.date.to_string(),
             affected_count: i.affected_count.unwrap_or(0),
             deaths: i.deaths.unwrap_or(0),
-            hospitalized: 0, // Mock
+            hospitalized: 0, // Not in DB model
             cause: i.cause,
             status: i.status,
             severity: i.severity,
@@ -219,7 +249,11 @@ impl IncidentService {
             source: i.source,
             created_at: i.created_at.unwrap_or_default().to_string(),
             updated_at: i.updated_at.unwrap_or_default().to_string(),
-            resolved_at: None, // Mock
+            resolved_at: if i.status == Some(IncidentStatus::Resolved) {
+                i.updated_at.map(|d| d.to_string())
+            } else {
+                None
+            },
         }
     }
 }

@@ -1,9 +1,12 @@
 //! Utility services including file uploads and health checks.
 
+use std::sync::Arc;
+
 use serde::Serialize;
-use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::database::Database;
+use crate::database::table::Table;
 use crate::error::AppError;
 
 #[derive(Debug, Serialize)]
@@ -54,13 +57,13 @@ pub struct ServicesHealth {
 
 /// Service for utility operations like image uploads and system health.
 pub struct UtilityService {
-    pool: PgPool,
+    db: Arc<Database>,
 }
 
 impl UtilityService {
     /// Creates a new `UtilityService`.
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(db: Arc<Database>) -> Self {
+        Self { db }
     }
 
     /// Uploads an image to the storage system.
@@ -131,8 +134,8 @@ impl UtilityService {
     }
 
     pub async fn health_check(&self) -> Result<HealthCheckResponse, AppError> {
-        // Check DB connection
-        let db_status = match sqlx::query("SELECT 1").execute(&self.pool).await {
+        // Check DB connection by running a simple query through the database
+        let db_status = match self.db.user_table.select_all().await {
             Ok(_) => "healthy",
             Err(_) => "unhealthy",
         };

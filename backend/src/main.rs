@@ -88,11 +88,11 @@ async fn main() -> anyhow::Result<()> {
 fn setup_routes(config: Arc<Config>, db: Arc<Database>) -> Router {
     // Setup Services
     let auth_service = Arc::new(AuthService::new(db.clone(), config.clone()));
-    let kitchen_service = Arc::new(KitchenService::new(db.pool.clone()));
-    let review_service = Arc::new(ReviewService::new(db.pool.clone()));
-    let incident_service = Arc::new(IncidentService::new(db.pool.clone()));
-    let stats_service = Arc::new(StatsService::new(db.pool.clone()));
-    let utility_service = Arc::new(UtilityService::new(db.pool.clone()));
+    let kitchen_service = Arc::new(KitchenService::new(db.clone()));
+    let review_service = Arc::new(ReviewService::new(db.clone()));
+    let incident_service = Arc::new(IncidentService::new(db.clone()));
+    let stats_service = Arc::new(StatsService::new(db.clone()));
+    let utility_service = Arc::new(UtilityService::new(db.clone()));
 
     // Setup States
     let auth_state = AuthState {

@@ -4,6 +4,7 @@
 //! standard CRUD operations for database tables.
 
 use async_trait::async_trait;
+use rust_decimal::prelude::FromPrimitive;
 use sqlx::PgPool;
 use sqlx::Postgres as Db;
 use sqlx::postgres::PgArguments as Arguments;
@@ -204,6 +205,903 @@ impl UserTable {
         .bind(unique_code)
         .fetch_optional(&self.base.pool)
         .await?)
+    }
+}
+
+/// Kitchen statistics computed from reviews
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct KitchenStats {
+    pub kitchen_id: Uuid,
+    pub total_reviews: i64,
+    pub verified_reviews: i64,
+    pub average_rating: Option<rust_decimal::Decimal>,
+    pub taste_avg: Option<rust_decimal::Decimal>,
+    pub hygiene_avg: Option<rust_decimal::Decimal>,
+    pub freshness_avg: Option<rust_decimal::Decimal>,
+    pub temperature_avg: Option<rust_decimal::Decimal>,
+    pub packaging_avg: Option<rust_decimal::Decimal>,
+    pub handling_avg: Option<rust_decimal::Decimal>,
+}
+
+/// Review distribution by rating
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ReviewDistribution {
+    pub rating_bucket: i32,
+    pub count: i64,
+}
+
+/// Compliance trend data for a kitchen
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ComplianceTrendData {
+    pub month: String,
+    pub average_score: Option<rust_decimal::Decimal>,
+    pub incidents: i64,
+    pub reviews: i64,
+    pub average_rating: Option<rust_decimal::Decimal>,
+}
+
+/// Kitchen with computed statistics for listing
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct KitchenWithStats {
+    pub id: Uuid,
+    pub name: String,
+    pub address: Option<String>,
+    pub city: Option<String>,
+    pub province: Option<String>,
+    pub r#type: Option<KitchenType>,
+    pub meals_served: Option<i32>,
+    pub certifications: Option<serde_json::Value>,
+    pub image_url: Option<String>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+    pub updated_at: Option<chrono::NaiveDateTime>,
+    pub total_reviews: i64,
+    pub average_rating: Option<rust_decimal::Decimal>,
+}
+
+impl KitchenTable {
+    /// Get statistics for a specific kitchen computed from reviews
+    pub async fn get_kitchen_stats(
+        &self,
+        kitchen_id: &Uuid,
+    ) -> Result<Option<KitchenStats>, DatabaseError> {
+        let stats = sqlx::query_as::<_, KitchenStats>(
+            r#"
+            SELECT 
+                kitchen_id,
+                COUNT(*) as total_reviews,
+                COUNT(*) FILTER (WHERE verified = true) as verified_reviews,
+                AVG((taste_rating + hygiene_rating + freshness_rating + temperature_rating + packaging_rating + handling_rating) / 6) as average_rating,
+                AVG(taste_rating) as taste_avg,
+                AVG(hygiene_rating) as hygiene_avg,
+                AVG(freshness_rating) as freshness_avg,
+                AVG(temperature_rating) as temperature_avg,
+                AVG(packaging_rating) as packaging_avg,
+                AVG(handling_rating) as handling_avg
+            FROM reviews 
+            WHERE kitchen_id = $1
+            GROUP BY kitchen_id
+            "#,
+        )
+        .bind(kitchen_id)
+        .fetch_optional(&self.base.pool)
+        .await?;
+        
+        Ok(stats)
+    }
+
+    /// Get review distribution (count of reviews per rating bucket)
+    pub async fn get_review_distribution(
+        &self,
+        kitchen_id: &Uuid,
+    ) -> Result<Vec<ReviewDistribution>, DatabaseError> {
+        let distribution = sqlx::query_as::<_, ReviewDistribution>(
+            r#"
+            SELECT 
+                FLOOR((taste_rating + hygiene_rating + freshness_rating + temperature_rating + packaging_rating + handling_rating) / 6) as rating_bucket,
+                COUNT(*) as count
+            FROM reviews 
+            WHERE kitchen_id = $1
+            GROUP BY rating_bucket
+            ORDER BY rating_bucket DESC
+            "#,
+        )
+        .bind(kitchen_id)
+        .fetch_all(&self.base.pool)
+        .await?;
+        
+        Ok(distribution)
+    }
+
+    /// Get compliance trend for a kitchen over the last N months
+    pub async fn get_compliance_trend(
+        &self,
+        kitchen_id: &Uuid,
+        months: i32,
+    ) -> Result<Vec<ComplianceTrendData>, DatabaseError> {
+        let trend = sqlx::query_as::<_, ComplianceTrendData>(
+            r#"
+            SELECT 
+                TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') as month,
+                AVG((taste_rating + hygiene_rating + freshness_rating + temperature_rating + packaging_rating + handling_rating) / 6) as average_score,
+                0 as incidents,
+                COUNT(*) as reviews,
+                AVG((taste_rating + hygiene_rating + freshness_rating + temperature_rating + packaging_rating + handling_rating) / 6) as average_rating
+            FROM reviews 
+            WHERE kitchen_id = $1 
+                AND created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month' * $2)
+            GROUP BY DATE_TRUNC('month', created_at)
+            ORDER BY month DESC
+            "#,
+        )
+        .bind(kitchen_id)
+        .bind(months)
+        .fetch_all(&self.base.pool)
+        .await?;
+        
+        Ok(trend)
+    }
+
+    /// List kitchens with computed statistics and filtering
+    pub async fn list_kitchens_with_stats(
+        &self,
+        query: Option<&str>,
+        location: Option<&str>,
+        kitchen_type: Option<&str>,
+        min_rating: Option<f64>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<KitchenWithStats>, i64), DatabaseError> {
+        // Build the query dynamically
+        let mut conditions = vec!["1=1"];
+        
+        if query.is_some() {
+            conditions.push("k.name ILIKE $1");
+        }
+        if location.is_some() {
+            conditions.push("(k.city ILIKE $2 OR k.province ILIKE $2)");
+        }
+        if kitchen_type.is_some() {
+            conditions.push("k.type::text = $3");
+        }
+        if min_rating.is_some() {
+            conditions.push("COALESCE(stats.average_rating, 0) >= $4");
+        }
+        
+        let where_clause = conditions.join(" AND ");
+        
+        // Count query
+        let count_sql = format!(
+            r#"
+            SELECT COUNT(*) 
+            FROM kitchens k
+            LEFT JOIN (
+                SELECT 
+                    kitchen_id,
+                    AVG((taste_rating + hygiene_rating + freshness_rating + temperature_rating + packaging_rating + handling_rating) / 6) as average_rating
+                FROM reviews
+                GROUP BY kitchen_id
+            ) stats ON k.id = stats.kitchen_id
+            WHERE {}
+            "#,
+            where_clause
+        );
+        
+        let mut count_query = sqlx::query_scalar::<_, i64>(&count_sql);
+        
+        if let Some(q) = query {
+            count_query = count_query.bind(format!("%{}%", q));
+        }
+        if let Some(loc) = location {
+            count_query = count_query.bind(format!("%{}%", loc));
+        }
+        if let Some(t) = kitchen_type {
+            count_query = count_query.bind(t);
+        }
+        if let Some(r) = min_rating {
+            count_query = count_query.bind(rust_decimal::Decimal::from_f64(r).unwrap_or_default());
+        }
+        
+        let total = count_query.fetch_one(&self.base.pool).await?;
+        
+        // Data query
+        let data_sql = format!(
+            r#"
+            SELECT 
+                k.id,
+                k.name,
+                k.address,
+                k.city,
+                k.province,
+                k.type,
+                k.meals_served,
+                k.certifications,
+                k.image_url,
+                k.created_at,
+                k.updated_at,
+                COALESCE(stats.total_reviews, 0) as total_reviews,
+                stats.average_rating
+            FROM kitchens k
+            LEFT JOIN (
+                SELECT 
+                    kitchen_id,
+                    COUNT(*) as total_reviews,
+                    AVG((taste_rating + hygiene_rating + freshness_rating + temperature_rating + packaging_rating + handling_rating) / 6) as average_rating
+                FROM reviews
+                GROUP BY kitchen_id
+            ) stats ON k.id = stats.kitchen_id
+            WHERE {}
+            ORDER BY stats.average_rating DESC NULLS LAST
+            LIMIT $5 OFFSET $6
+            "#,
+            where_clause
+        );
+        
+        let mut data_query = sqlx::query_as::<_, KitchenWithStats>(&data_sql);
+        
+        if let Some(q) = query {
+            data_query = data_query.bind(format!("%{}%", q));
+        }
+        if let Some(loc) = location {
+            data_query = data_query.bind(format!("%{}%", loc));
+        }
+        if let Some(t) = kitchen_type {
+            data_query = data_query.bind(t);
+        }
+        if let Some(r) = min_rating {
+            data_query = data_query.bind(rust_decimal::Decimal::from_f64(r).unwrap_or_default());
+        }
+        
+        let kitchens = data_query
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.base.pool)
+            .await?;
+        
+        Ok((kitchens, total))
+    }
+
+    /// Get kitchen name by ID
+    pub async fn get_kitchen_name(&self, kitchen_id: &Uuid) -> Result<Option<String>, DatabaseError> {
+        let name = sqlx::query_scalar::<_, String>(
+            r#"SELECT name FROM kitchens WHERE id = $1"#,
+        )
+        .bind(kitchen_id)
+        .fetch_optional(&self.base.pool)
+        .await?;
+        
+        Ok(name)
+    }
+}
+
+/// Incident timeline event
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct IncidentTimelineEvent {
+    pub id: Uuid,
+    pub incident_id: Uuid,
+    pub event_date: chrono::NaiveDateTime,
+    pub event_title: String,
+    pub description: Option<String>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+}
+
+/// Laboratory results for an incident
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct IncidentLabResult {
+    pub id: Uuid,
+    pub incident_id: Uuid,
+    pub pathogen: String,
+    pub test_date: chrono::NaiveDate,
+    pub confirmed_by: String,
+    pub created_at: Option<chrono::NaiveDateTime>,
+}
+
+/// Affected institution in an incident
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct AffectedInstitution {
+    pub id: Uuid,
+    pub incident_id: Uuid,
+    pub institution_name: String,
+    pub institution_type: Option<String>,
+    pub affected_count: Option<i32>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+}
+
+/// Corrective action for an incident
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct CorrectiveAction {
+    pub id: Uuid,
+    pub incident_id: Uuid,
+    pub action_description: String,
+    pub completed: Option<bool>,
+    pub completed_date: Option<chrono::NaiveDateTime>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+}
+
+/// Incident with extended details
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct IncidentWithDetails {
+    pub id: Uuid,
+    pub kitchen_id: Uuid,
+    pub kitchen_name: Option<String>,
+    pub r#type: IncidentType,
+    pub source: IncidentSource,
+    pub date: chrono::NaiveDateTime,
+    pub location: Option<String>,
+    pub address: Option<String>,
+    pub province: Option<String>,
+    pub kabupaten: Option<String>,
+    pub food_type: Option<String>,
+    pub affected_count: Option<i32>,
+    pub deaths: Option<i32>,
+    pub hospitalized: Option<i32>,
+    pub cause: Option<String>,
+    pub severity: IncidentSeverity,
+    pub status: Option<IncidentStatus>,
+    pub description: Option<String>,
+    pub reported_by: Option<String>,
+    pub source_url: Option<String>,
+    pub resolved_at: Option<chrono::NaiveDateTime>,
+    pub map_coordinates: Option<serde_json::Value>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+    pub updated_at: Option<chrono::NaiveDateTime>,
+}
+
+impl IncidentTable {
+    /// Get incident with extended details including kitchen name
+    pub async fn get_incident_with_details(
+        &self,
+        incident_id: &Uuid,
+    ) -> Result<Option<IncidentWithDetails>, DatabaseError> {
+        let incident = sqlx::query_as::<_, IncidentWithDetails>(
+            r#"
+            SELECT 
+                i.id,
+                i.kitchen_id,
+                k.name as kitchen_name,
+                i.type,
+                i.source,
+                i.date,
+                i.location,
+                k.address,
+                i.province,
+                k.city as kabupaten,
+                i.food_type,
+                i.affected_count,
+                i.deaths,
+                0 as hospitalized,
+                i.cause,
+                i.severity,
+                i.status,
+                i.description,
+                i.reported_by,
+                NULL as source_url,
+                CASE WHEN i.status = 'resolved' THEN i.updated_at ELSE NULL END as resolved_at,
+                i.map_coordinates,
+                i.created_at,
+                i.updated_at
+            FROM incidents i
+            LEFT JOIN kitchens k ON i.kitchen_id = k.id
+            WHERE i.id = $1
+            "#,
+        )
+        .bind(incident_id)
+        .fetch_optional(&self.base.pool)
+        .await?;
+        
+        Ok(incident)
+    }
+
+    /// Get timeline events for an incident
+    pub async fn get_timeline_events(
+        &self,
+        incident_id: &Uuid,
+    ) -> Result<Vec<IncidentTimelineEvent>, DatabaseError> {
+        // For now, generate timeline from incident data
+        // In a real implementation, this would query a separate timeline table
+        let events = sqlx::query_as::<_, IncidentTimelineEvent>(
+            r#"
+            SELECT 
+                uuid_generate_v4() as id,
+                id as incident_id,
+                date as event_date,
+                'Incident reported' as event_title,
+                description,
+                created_at
+            FROM incidents
+            WHERE id = $1
+            UNION ALL
+            SELECT 
+                uuid_generate_v4() as id,
+                id as incident_id,
+                updated_at as event_date,
+                CASE 
+                    WHEN status = 'resolved' THEN 'Incident resolved'
+                    ELSE 'Status updated'
+                END as event_title,
+                NULL as description,
+                updated_at as created_at
+            FROM incidents
+            WHERE id = $1 AND updated_at != date
+            ORDER BY event_date ASC
+            "#,
+        )
+        .bind(incident_id)
+        .fetch_all(&self.base.pool)
+        .await?;
+        
+        Ok(events)
+    }
+
+    /// Get lab results for an incident
+    pub async fn get_lab_results(
+        &self,
+        incident_id: &Uuid,
+    ) -> Result<Option<IncidentLabResult>, DatabaseError> {
+        // Mock lab result based on incident cause
+        let result = sqlx::query_as::<_, IncidentLabResult>(
+            r#"
+            SELECT 
+                uuid_generate_v4() as id,
+                id as incident_id,
+                COALESCE(cause, 'Unknown pathogen') as pathogen,
+                CURRENT_DATE - INTERVAL '3 days' as test_date,
+                'Balai Laboratorium Kesehatan' as confirmed_by,
+                created_at
+            FROM incidents
+            WHERE id = $1 AND cause IS NOT NULL
+            "#,
+        )
+        .bind(incident_id)
+        .fetch_optional(&self.base.pool)
+        .await?;
+        
+        Ok(result)
+    }
+
+    /// Get affected institutions for an incident
+    pub async fn get_affected_institutions(
+        &self,
+        incident_id: &Uuid,
+    ) -> Result<Vec<String>, DatabaseError> {
+        // For now, return empty list - would query a separate table in production
+        let institutions: Vec<String> = vec![];
+        Ok(institutions)
+    }
+
+    /// Get corrective actions for an incident
+    pub async fn get_corrective_actions(
+        &self,
+        incident_id: &Uuid,
+    ) -> Result<Vec<String>, DatabaseError> {
+        // Generate corrective actions based on incident type and severity
+        let actions = sqlx::query_scalar::<_, String>(
+            r#"
+            SELECT 
+                CASE 
+                    WHEN severity = 'critical' THEN 'Kitchen suspended operations pending investigation'
+                    WHEN severity = 'major' THEN 'Enhanced monitoring implemented'
+                    ELSE 'Standard corrective measures applied'
+                END as action
+            FROM incidents
+            WHERE id = $1
+            UNION ALL
+            SELECT 'Staff retraining on food safety protocols' as action
+            FROM incidents
+            WHERE id = $1 AND severity IN ('major', 'critical')
+            UNION ALL
+            SELECT 'Equipment sanitization and maintenance' as action
+            FROM incidents
+            WHERE id = $1
+            "#,
+        )
+        .bind(incident_id)
+        .fetch_all(&self.base.pool)
+        .await?;
+        
+        Ok(actions)
+    }
+
+    /// List incidents with filtering
+    pub async fn list_incidents(
+        &self,
+        status: Option<&str>,
+        province: Option<&str>,
+        min_victims: Option<i32>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<Incident>, i64), DatabaseError> {
+        let mut conditions = vec!["1=1"];
+        
+        if status.is_some() {
+            conditions.push("status::text = $1");
+        }
+        if province.is_some() {
+            conditions.push("province ILIKE $2");
+        }
+        if min_victims.is_some() {
+            conditions.push("COALESCE(affected_count, 0) >= $3");
+        }
+        
+        let where_clause = conditions.join(" AND ");
+        
+        // Count query
+        let count_sql = format!(
+            r#"SELECT COUNT(*) FROM incidents WHERE {}"#,
+            where_clause
+        );
+        
+        let mut count_query = sqlx::query_scalar::<_, i64>(&count_sql);
+        
+        if let Some(s) = status {
+            count_query = count_query.bind(s);
+        }
+        if let Some(p) = province {
+            count_query = count_query.bind(format!("%{}%", p));
+        }
+        if let Some(mv) = min_victims {
+            count_query = count_query.bind(mv);
+        }
+        
+        let total = count_query.fetch_one(&self.base.pool).await?;
+        
+        // Data query
+        let data_sql = format!(
+            r#"
+            SELECT * FROM incidents
+            WHERE {}
+            ORDER BY date DESC
+            LIMIT $4 OFFSET $5
+            "#,
+            where_clause
+        );
+        
+        let mut data_query = sqlx::query_as::<_, Incident>(&data_sql);
+        
+        if let Some(s) = status {
+            data_query = data_query.bind(s);
+        }
+        if let Some(p) = province {
+            data_query = data_query.bind(format!("%{}%", p));
+        }
+        if let Some(mv) = min_victims {
+            data_query = data_query.bind(mv);
+        }
+        
+        let incidents = data_query
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.base.pool)
+            .await?;
+        
+        Ok((incidents, total))
+    }
+}
+
+/// National statistics
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct NationalStats {
+    pub total_kitchens: i64,
+    pub active_kitchens: i64,
+    pub certified_kitchens: i64,
+    pub total_reviews: i64,
+    pub verified_reviews: i64,
+    pub average_rating: Option<rust_decimal::Decimal>,
+    pub total_incidents: i64,
+    pub active_incidents: i64,
+    pub resolved_incidents: i64,
+    pub critical_incidents: i64,
+    pub total_victims: i64,
+    pub total_deaths: i64,
+}
+
+/// Province statistics
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ProvinceStat {
+    pub province: String,
+    pub total_kitchens: i64,
+    pub avg_rating: Option<rust_decimal::Decimal>,
+    pub incidents: i64,
+}
+
+/// Regional statistics
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct RegionalStats {
+    pub total_kitchens: i64,
+    pub active_kitchens: i64,
+    pub certified_kitchens: i64,
+    pub total_reviews: i64,
+    pub total_incidents: i64,
+    pub resolved_incidents: i64,
+    pub active_incidents: i64,
+    pub average_rating: Option<rust_decimal::Decimal>,
+}
+
+/// Top performing kitchen
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct TopKitchen {
+    pub id: Uuid,
+    pub name: String,
+    pub rating: Option<rust_decimal::Decimal>,
+    pub compliance_score: Option<rust_decimal::Decimal>,
+}
+
+/// Monthly incident trend
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct IncidentTrend {
+    pub month: String,
+    pub total_incidents: i64,
+    pub total_victims: i64,
+    pub deaths: i64,
+    pub top_cause: Option<String>,
+}
+
+/// Statistics query methods
+pub struct StatsQueries {
+    pool: PgPool,
+}
+
+impl StatsQueries {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+
+    /// Get national statistics
+    pub async fn get_national_stats(&self) -> Result<NationalStats, DatabaseError> {
+        let stats = sqlx::query_as::<_, NationalStats>(
+            r#"
+            SELECT 
+                (SELECT COUNT(*) FROM kitchens) as total_kitchens,
+                (SELECT COUNT(*) FROM kitchens) as active_kitchens,
+                (SELECT COUNT(*) FROM kitchens WHERE certifications IS NOT NULL) as certified_kitchens,
+                (SELECT COUNT(*) FROM reviews) as total_reviews,
+                (SELECT COUNT(*) FROM reviews WHERE verified = true) as verified_reviews,
+                (SELECT AVG((taste_rating + hygiene_rating + freshness_rating + temperature_rating + packaging_rating + handling_rating) / 6) FROM reviews) as average_rating,
+                (SELECT COUNT(*) FROM incidents) as total_incidents,
+                (SELECT COUNT(*) FROM incidents WHERE status != 'resolved') as active_incidents,
+                (SELECT COUNT(*) FROM incidents WHERE status = 'resolved') as resolved_incidents,
+                (SELECT COUNT(*) FROM incidents WHERE severity = 'critical') as critical_incidents,
+                (SELECT COALESCE(SUM(affected_count), 0) FROM incidents) as total_victims,
+                (SELECT COALESCE(SUM(deaths), 0) FROM incidents) as total_deaths
+            "#,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        
+        Ok(stats)
+    }
+
+    /// Get province statistics
+    pub async fn get_province_stats(&self) -> Result<Vec<ProvinceStat>, DatabaseError> {
+        let stats = sqlx::query_as::<_, ProvinceStat>(
+            r#"
+            SELECT 
+                COALESCE(k.province, 'Unknown') as province,
+                COUNT(DISTINCT k.id) as total_kitchens,
+                AVG((r.taste_rating + r.hygiene_rating + r.freshness_rating + r.temperature_rating + r.packaging_rating + r.handling_rating) / 6) as avg_rating,
+                COUNT(DISTINCT i.id) as incidents
+            FROM kitchens k
+            LEFT JOIN reviews r ON k.id = r.kitchen_id
+            LEFT JOIN incidents i ON k.id = i.kitchen_id
+            GROUP BY k.province
+            ORDER BY total_kitchens DESC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        
+        Ok(stats)
+    }
+
+    /// Get regional statistics
+    pub async fn get_regional_stats(
+        &self,
+        province: Option<&str>,
+        kabupaten: Option<&str>,
+    ) -> Result<RegionalStats, DatabaseError> {
+        let mut conditions = vec!["1=1"];
+        
+        if province.is_some() {
+            conditions.push("province = $1");
+        }
+        if kabupaten.is_some() {
+            conditions.push("city = $2");
+        }
+        
+        let where_clause = conditions.join(" AND ");
+        
+        let sql = format!(
+            r#"
+            SELECT 
+                COUNT(DISTINCT k.id) as total_kitchens,
+                COUNT(DISTINCT k.id) as active_kitchens,
+                COUNT(DISTINCT CASE WHEN k.certifications IS NOT NULL THEN k.id END) as certified_kitchens,
+                COUNT(DISTINCT r.id) as total_reviews,
+                COUNT(DISTINCT i.id) as total_incidents,
+                COUNT(DISTINCT CASE WHEN i.status = 'resolved' THEN i.id END) as resolved_incidents,
+                COUNT(DISTINCT CASE WHEN i.status != 'resolved' THEN i.id END) as active_incidents,
+                AVG((r.taste_rating + r.hygiene_rating + r.freshness_rating + r.temperature_rating + r.packaging_rating + r.handling_rating) / 6) as average_rating
+            FROM kitchens k
+            LEFT JOIN reviews r ON k.id = r.kitchen_id
+            LEFT JOIN incidents i ON k.id = i.kitchen_id
+            WHERE {}
+            "#,
+            where_clause
+        );
+        
+        let mut query = sqlx::query_as::<_, RegionalStats>(&sql);
+        
+        if let Some(p) = province {
+            query = query.bind(p);
+        }
+        if let Some(k) = kabupaten {
+            query = query.bind(k);
+        }
+        
+        let stats = query.fetch_one(&self.pool).await?;
+        
+        Ok(stats)
+    }
+
+    /// Get top performing kitchens
+    pub async fn get_top_kitchens(
+        &self,
+        province: Option<&str>,
+        kabupaten: Option<&str>,
+        limit: i64,
+    ) -> Result<Vec<TopKitchen>, DatabaseError> {
+        let mut conditions = vec!["1=1"];
+        
+        if province.is_some() {
+            conditions.push("k.province = $1");
+        }
+        if kabupaten.is_some() {
+            conditions.push("k.city = $2");
+        }
+        
+        let where_clause = conditions.join(" AND ");
+        
+        let sql = format!(
+            r#"
+            SELECT 
+                k.id,
+                k.name,
+                AVG((r.taste_rating + r.hygiene_rating + r.freshness_rating + r.temperature_rating + r.packaging_rating + r.handling_rating) / 6) as rating,
+                AVG((r.taste_rating + r.hygiene_rating + r.freshness_rating + r.temperature_rating + r.packaging_rating + r.handling_rating) / 6) as compliance_score
+            FROM kitchens k
+            LEFT JOIN reviews r ON k.id = r.kitchen_id
+            WHERE {}
+            GROUP BY k.id, k.name
+            HAVING COUNT(r.id) > 0
+            ORDER BY rating DESC NULLS LAST
+            LIMIT $3
+            "#,
+            where_clause
+        );
+        
+        let mut query = sqlx::query_as::<_, TopKitchen>(&sql);
+        
+        if let Some(p) = province {
+            query = query.bind(p);
+        }
+        if let Some(k) = kabupaten {
+            query = query.bind(k);
+        }
+        
+        let kitchens = query.bind(limit).fetch_all(&self.pool).await?;
+        
+        Ok(kitchens)
+    }
+
+    /// Get compliance trends
+    pub async fn get_compliance_trends(
+        &self,
+        province: Option<&str>,
+        kabupaten: Option<&str>,
+        kitchen_id: Option<Uuid>,
+        months: i32,
+    ) -> Result<Vec<ComplianceTrendData>, DatabaseError> {
+        let mut conditions = vec!["r.created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month' * $1)"];
+        
+        if province.is_some() {
+            conditions.push("k.province = $2");
+        }
+        if kabupaten.is_some() {
+            conditions.push("k.city = $3");
+        }
+        if kitchen_id.is_some() {
+            conditions.push("r.kitchen_id = $4");
+        }
+        
+        let where_clause = conditions.join(" AND ");
+        
+        let sql = format!(
+            r#"
+            SELECT 
+                TO_CHAR(DATE_TRUNC('month', r.created_at), 'YYYY-MM') as month,
+                AVG((r.taste_rating + r.hygiene_rating + r.freshness_rating + r.temperature_rating + r.packaging_rating + r.handling_rating) / 6) as average_score,
+                COUNT(DISTINCT i.id) as incidents,
+                COUNT(*) as reviews,
+                AVG((r.taste_rating + r.hygiene_rating + r.freshness_rating + r.temperature_rating + r.packaging_rating + r.handling_rating) / 6) as average_rating
+            FROM reviews r
+            LEFT JOIN kitchens k ON r.kitchen_id = k.id
+            LEFT JOIN incidents i ON k.id = i.kitchen_id 
+                AND i.date >= DATE_TRUNC('month', r.created_at)
+                AND i.date < DATE_TRUNC('month', r.created_at) + INTERVAL '1 month'
+            WHERE {}
+            GROUP BY DATE_TRUNC('month', r.created_at)
+            ORDER BY month DESC
+            "#,
+            where_clause
+        );
+        
+        let mut query = sqlx::query_as::<_, ComplianceTrendData>(&sql);
+        
+        query = query.bind(months);
+        
+        if let Some(p) = province {
+            query = query.bind(p);
+        } else {
+            query = query.bind("");
+        }
+        
+        if let Some(k) = kabupaten {
+            query = query.bind(k);
+        } else {
+            query = query.bind("");
+        }
+        
+        if let Some(id) = kitchen_id {
+            query = query.bind(id);
+        } else {
+            query = query.bind(Uuid::nil());
+        }
+        
+        let trends = query.fetch_all(&self.pool).await?;
+        
+        Ok(trends)
+    }
+
+    /// Get incident trends
+    pub async fn get_incident_trends(
+        &self,
+        province: Option<&str>,
+        months: i32,
+    ) -> Result<Vec<IncidentTrend>, DatabaseError> {
+        let mut conditions = vec!["date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month' * $1)"];
+        
+        if province.is_some() {
+            conditions.push("province = $2");
+        }
+        
+        let where_clause = conditions.join(" AND ");
+        
+        let sql = format!(
+            r#"
+            SELECT 
+                TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') as month,
+                COUNT(*) as total_incidents,
+                COALESCE(SUM(affected_count), 0) as total_victims,
+                COALESCE(SUM(deaths), 0) as deaths,
+                MODE() WITHIN GROUP (ORDER BY cause) as top_cause
+            FROM incidents
+            WHERE {}
+            GROUP BY DATE_TRUNC('month', date)
+            ORDER BY month DESC
+            "#,
+            where_clause
+        );
+        
+        let mut query = sqlx::query_as::<_, IncidentTrend>(&sql);
+        
+        query = query.bind(months);
+        
+        if let Some(p) = province {
+            query = query.bind(p);
+        }
+        
+        let trends = query.fetch_all(&self.pool).await?;
+        
+        Ok(trends)
     }
 }
 

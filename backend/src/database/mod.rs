@@ -18,12 +18,14 @@ pub mod table;
 
 use table::*;
 
+pub use table::StatsQueries;
+
 /// Central database manager.
 ///
-/// Holds the connection pool and all table-specific DAOs.
+/// Holds the connection pool and all table-specific data access objects.
 pub struct Database {
     /// The underlying SQLx connection pool.
-    pub pool: Pool,
+    pool: Pool,
     /// Table for institution data.
     pub institution_table: InstitutionTable,
     /// Table for user data.
@@ -62,6 +64,16 @@ pub struct Database {
     pub notification_audit_trail_table: NotificationAuditTrailTable,
     /// Table for video data.
     pub video_table: VideoTable,
+    /// Statistics queries
+    pub stats_queries: StatsQueries,
+}
+
+impl Database {
+    /// Close the connection pool
+    /// Used primarily for testing
+    pub async fn close(&self) {
+        self.pool.close().await;
+    }
 }
 
 impl Database {
@@ -97,6 +109,7 @@ impl Database {
         let notification_table = NotificationTable::new(pool.clone());
         let notification_audit_trail_table = NotificationAuditTrailTable::new(pool.clone());
         let video_table = VideoTable::new(pool.clone());
+        let stats_queries = StatsQueries::new(pool.clone());
 
         Ok(Self {
             pool,
@@ -119,6 +132,7 @@ impl Database {
             notification_table,
             notification_audit_trail_table,
             video_table,
+            stats_queries,
         })
     }
 

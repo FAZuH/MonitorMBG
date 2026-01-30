@@ -1,9 +1,11 @@
 //! Statistics and analytics service.
 
+use std::sync::Arc;
+
 use serde::Serialize;
-use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::database::Database;
 use crate::error::AppError;
 
 #[derive(Debug, Serialize)]
@@ -176,13 +178,13 @@ pub struct IncidentSummaryDto {
 
 /// Service for generating national and regional statistics.
 pub struct StatsService {
-    pool: PgPool,
+    db: Arc<Database>,
 }
 
 impl StatsService {
     /// Creates a new `StatsService`.
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(db: Arc<Database>) -> Self {
+        Self { db }
     }
 
     /// Retrieves national-level statistics.
@@ -191,31 +193,42 @@ impl StatsService {
         year: Option<i32>,
         month: Option<i32>,
     ) -> Result<NationalStatsDto, AppError> {
-        // Mock implementation
+        let stats = self.db.stats_queries.get_national_stats().await?;
+        let province_stats = self.db.stats_queries.get_province_stats().await?;
+
         Ok(NationalStatsDto {
             period: PeriodDto {
                 year: year.unwrap_or(2025),
                 month,
             },
-            total_kitchens: 1248,
-            active_kitchens: 1205,
-            certified_kitchens: 892,
-            total_reviews: 15678,
-            verified_reviews: 14234,
-            average_rating: 4.6,
-            average_compliance_score: 91.3,
-            total_incidents: 23,
-            active_incidents: 5,
-            resolved_incidents: 18,
-            critical_incidents: 2,
-            total_victims: 456,
-            total_deaths: 0,
-            province_stats: vec![ProvinceStatsDto {
-                province: "DKI Jakarta".to_string(),
-                total_kitchens: 145,
-                avg_rating: 4.7,
-                incidents: 3,
-            }],
+            total_kitchens: stats.total_kitchens as i32,
+            active_kitchens: stats.active_kitchens as i32,
+            certified_kitchens: stats.certified_kitchens as i32,
+            total_reviews: stats.total_reviews as i32,
+            verified_reviews: stats.verified_reviews as i32,
+            average_rating: stats
+                .average_rating
+                .and_then(|d| d.try_into().ok())
+                .unwrap_or(0.0),
+            average_compliance_score: stats
+                .average_rating
+                .and_then(|d| d.try_into().ok())
+                .unwrap_or(0.0),
+            total_incidents: stats.total_incidents as i32,
+            active_incidents: stats.active_incidents as i32,
+            resolved_incidents: stats.resolved_incidents as i32,
+            critical_incidents: stats.critical_incidents as i32,
+            total_victims: stats.total_victims as i32,
+            total_deaths: stats.total_deaths as i32,
+            province_stats: province_stats
+                .into_iter()
+                .map(|p| ProvinceStatsDto {
+                    province: p.province,
+                    total_kitchens: p.total_kitchens as i32,
+                    avg_rating: p.avg_rating.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
+                    incidents: p.incidents as i32,
+                })
+                .collect(),
             last_updated: chrono::Utc::now().to_rfc3339(),
         })
     }
@@ -227,31 +240,54 @@ impl StatsService {
         year: Option<i32>,
         month: Option<i32>,
     ) -> Result<RegionalStatsDto, AppError> {
-        // Mock implementation
+        let stats = self
+            .db
+            .stats_queries
+            .get_regional_stats(province.as_deref(), kabupaten.as_deref())
+            .await?;
+
+        let top_kitchens = self
+            .db
+            .stats_queries
+            .get_top_kitchens(province.as_deref(), kabupaten.as_deref(), 5)
+            .await?;
+
         Ok(RegionalStatsDto {
             region: RegionDto {
-                province: province.unwrap_or("DKI Jakarta".to_string()),
+                province: province.unwrap_or("National".to_string()),
                 kabupaten,
             },
             period: PeriodDto {
                 year: year.unwrap_or(2025),
                 month,
             },
-            total_kitchens: 45,
-            active_kitchens: 43,
-            certified_kitchens: 38,
-            average_rating: 4.7,
-            average_compliance_score: 92.5,
-            total_reviews: 2341,
-            total_incidents: 1,
-            resolved_incidents: 1,
-            active_incidents: 0,
-            top_performing_kitchens: vec![TopKitchenDto {
-                id: Uuid::new_v4(),
-                name: "Dapur Sehat Jakarta Pusat".to_string(),
-                rating: 4.9,
-                compliance_score: 98.5,
-            }],
+            total_kitchens: stats.total_kitchens as i32,
+            active_kitchens: stats.active_kitchens as i32,
+            certified_kitchens: stats.certified_kitchens as i32,
+            average_rating: stats
+                .average_rating
+                .and_then(|d| d.try_into().ok())
+                .unwrap_or(0.0),
+            average_compliance_score: stats
+                .average_rating
+                .and_then(|d| d.try_into().ok())
+                .unwrap_or(0.0),
+            total_reviews: stats.total_reviews as i32,
+            total_incidents: stats.total_incidents as i32,
+            resolved_incidents: stats.resolved_incidents as i32,
+            active_incidents: stats.active_incidents as i32,
+            top_performing_kitchens: top_kitchens
+                .into_iter()
+                .map(|k| TopKitchenDto {
+                    id: k.id,
+                    name: k.name,
+                    rating: k.rating.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
+                    compliance_score: k
+                        .compliance_score
+                        .and_then(|d| d.try_into().ok())
+                        .unwrap_or(0.0),
+                })
+                .collect(),
             last_updated: chrono::Utc::now().to_rfc3339(),
         })
     }
@@ -263,28 +299,93 @@ impl StatsService {
         kitchen_id: Option<Uuid>,
         months: Option<i32>,
     ) -> Result<ComplianceTrendsDto, AppError> {
-        // Mock implementation
+        let months = months.unwrap_or(12);
+        let trends = self
+            .db
+            .stats_queries
+            .get_compliance_trends(province.as_deref(), kabupaten.as_deref(), kitchen_id, months)
+            .await?;
+
+        let total_reviews: i32 = trends.iter().map(|t| t.reviews as i32).sum();
+        let total_incidents: i32 = trends.iter().map(|t| t.incidents as i32).sum();
+
+        // Calculate trend direction
+        let trend = if trends.len() >= 2 {
+            let first = trends
+                .first()
+                .and_then(|t| t.average_score)
+                .and_then(|d| d.try_into().ok())
+                .unwrap_or(0.0);
+            let last = trends
+                .last()
+                .and_then(|t| t.average_score)
+                .and_then(|d| d.try_into().ok())
+                .unwrap_or(0.0);
+            if first > last {
+                "improving"
+            } else if first < last {
+                "declining"
+            } else {
+                "stable"
+            }
+        } else {
+            "stable"
+        };
+
+        // Calculate change percentage
+        let change_percent = if trends.len() >= 2 {
+            let first = trends
+                .first()
+                .and_then(|t| t.average_score)
+                .and_then(|d| d.try_into().ok())
+                .unwrap_or(0.0);
+            let last = trends
+                .last()
+                .and_then(|t| t.average_score)
+                .and_then(|d| d.try_into().ok())
+                .unwrap_or(0.0);
+            if first != 0.0 {
+                ((last - first) / first * 100.0_f64).abs()
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        };
+
         Ok(ComplianceTrendsDto {
             region: RegionDto {
-                province: province.unwrap_or("DKI Jakarta".to_string()),
+                province: province.unwrap_or("National".to_string()),
                 kabupaten,
             },
             period: DateRangeDto {
-                from: "2024-02-01T00:00:00Z".to_string(),
-                to: "2025-01-31T23:59:59Z".to_string(),
+                from: chrono::Utc::now()
+                    .checked_sub_months(chrono::Months::new(months as u32))
+                    .unwrap_or_else(|| chrono::Utc::now())
+                    .to_rfc3339(),
+                to: chrono::Utc::now().to_rfc3339(),
             },
-            data: vec![ComplianceTrendDataDto {
-                month: "2024-02".to_string(),
-                average_score: 88.5,
-                incidents: 5,
-                reviews: 1234,
-                average_rating: 4.5,
-            }],
+            data: trends
+                .into_iter()
+                .map(|t| ComplianceTrendDataDto {
+                    month: t.month,
+                    average_score: t
+                        .average_score
+                        .and_then(|d| d.try_into().ok())
+                        .unwrap_or(0.0),
+                    incidents: t.incidents as i32,
+                    reviews: t.reviews as i32,
+                    average_rating: t
+                        .average_rating
+                        .and_then(|d| d.try_into().ok())
+                        .unwrap_or(0.0),
+                })
+                .collect(),
             summary: ComplianceSummaryDto {
-                trend: "improving".to_string(),
-                change_percent: 4.5,
-                total_incidents: 23,
-                total_reviews: 15678,
+                trend: trend.to_string(),
+                change_percent,
+                total_incidents,
+                total_reviews,
             },
             last_updated: chrono::Utc::now().to_rfc3339(),
         })
@@ -296,26 +397,70 @@ impl StatsService {
         months: Option<i32>,
         group_by: Option<String>,
     ) -> Result<IncidentTrendsDto, AppError> {
-        // Mock implementation
+        let months = months.unwrap_or(12);
+        let trends = self
+            .db
+            .stats_queries
+            .get_incident_trends(province.as_deref(), months)
+            .await?;
+
+        let total_incidents: i32 = trends.iter().map(|t| t.total_incidents as i32).sum();
+        let total_victims: i32 = trends.iter().map(|t| t.total_victims as i32).sum();
+        let total_deaths: i32 = trends.iter().map(|t| t.deaths as i32).sum();
+
+        // Determine most common cause
+        let mut cause_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
+        for t in &trends {
+            if let Some(ref cause) = t.top_cause {
+                *cause_counts.entry(cause.clone()).or_insert(0) += 1;
+            }
+        }
+        let most_common_cause = cause_counts
+            .iter()
+            .max_by_key(|&(_, count)| count)
+            .map(|(cause, _)| cause.clone())
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        // Calculate trend direction
+        let trend = if trends.len() >= 2 {
+            let first = trends.first().map(|t| t.total_incidents).unwrap_or(0);
+            let last = trends.last().map(|t| t.total_incidents).unwrap_or(0);
+            if first > last {
+                "decreasing"
+            } else if first < last {
+                "increasing"
+            } else {
+                "stable"
+            }
+        } else {
+            "stable"
+        };
+
         Ok(IncidentTrendsDto {
             period: DateRangeDto {
-                from: "2024-02-01T00:00:00Z".to_string(),
-                to: "2025-01-31T23:59:59Z".to_string(),
+                from: chrono::Utc::now()
+                    .checked_sub_months(chrono::Months::new(months as u32))
+                    .unwrap_or_else(|| chrono::Utc::now())
+                    .to_rfc3339(),
+                to: chrono::Utc::now().to_rfc3339(),
             },
             group_by: group_by.unwrap_or("month".to_string()),
-            data: vec![IncidentTrendDataDto {
-                month: "2024-02".to_string(),
-                total_incidents: 5,
-                total_victims: 125,
-                deaths: 0,
-                top_cause: "Bacterial contamination".to_string(),
-            }],
+            data: trends
+                .into_iter()
+                .map(|t| IncidentTrendDataDto {
+                    month: t.month,
+                    total_incidents: t.total_incidents as i32,
+                    total_victims: t.total_victims as i32,
+                    deaths: t.deaths as i32,
+                    top_cause: t.top_cause.unwrap_or_else(|| "Unknown".to_string()),
+                })
+                .collect(),
             summary: IncidentSummaryDto {
-                total_incidents: 23,
-                total_victims: 456,
-                total_deaths: 0,
-                most_common_cause: "Bacterial contamination".to_string(),
-                trend: "decreasing".to_string(),
+                total_incidents,
+                total_victims,
+                total_deaths,
+                most_common_cause,
+                trend: trend.to_string(),
             },
             last_updated: chrono::Utc::now().to_rfc3339(),
         })

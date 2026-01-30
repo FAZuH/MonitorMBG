@@ -1,16 +1,17 @@
 //! Review and rating service.
 
+use std::sync::Arc;
+
 use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::json;
-use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::database::Database;
 use crate::database::model::Review;
 use crate::database::model::UserRole;
-use crate::database::table::ReviewTable;
 use crate::database::table::Table;
 use crate::error::AppError;
 
@@ -114,17 +115,13 @@ pub struct BatchReviewResponse {
 
 /// Service for managing kitchen reviews and ratings.
 pub struct ReviewService {
-    pool: PgPool,
-    review_table: ReviewTable,
+    db: Arc<Database>,
 }
 
 impl ReviewService {
     /// Creates a new `ReviewService`.
-    pub fn new(pool: PgPool) -> Self {
-        Self {
-            pool: pool.clone(),
-            review_table: ReviewTable::new(pool),
-        }
+    pub fn new(db: Arc<Database>) -> Self {
+        Self { db }
     }
 
     /// Submits a new review for a kitchen.
@@ -157,10 +154,11 @@ impl ReviewService {
             ..Default::default()
         };
 
-        let id = self.review_table.insert(&review).await?;
+        let id = self.db.review_table.insert(&review).await?;
 
         // Fetch back to return DTO
         let saved = self
+            .db
             .review_table
             .select(&id)
             .await?
@@ -177,8 +175,8 @@ impl ReviewService {
         limit: i64,
         offset: i64,
     ) -> Result<ReviewListResponse, AppError> {
-        // TODO: Implement filtering in DB
-        let all_reviews = self.review_table.select_all().await?;
+        // Get all reviews and filter by kitchen
+        let all_reviews = self.db.review_table.select_all().await?;
 
         let filtered: Vec<Review> = all_reviews
             .into_iter()
@@ -213,8 +211,8 @@ impl ReviewService {
         limit: i64,
         offset: i64,
     ) -> Result<ReviewListResponse, AppError> {
-        // TODO: Implement filtering in DB (verified only)
-        let all_reviews = self.review_table.select_all().await?;
+        // Get verified reviews only
+        let all_reviews = self.db.review_table.select_all().await?;
 
         let filtered: Vec<Review> = all_reviews
             .into_iter()
@@ -254,11 +252,12 @@ impl ReviewService {
         let mut failed = 0;
 
         for req in reviews {
+            let kitchen_id = req.kitchen_id;
             match self.submit_review(reviewer_id, req).await {
                 Ok(review) => {
                     created += 1;
                     results.push(BatchReviewResult {
-                        kitchen_id: review.kitchen_id,
+                        kitchen_id,
                         status: "created".to_string(),
                         review_id: Some(review.id),
                         error: None,
@@ -266,16 +265,8 @@ impl ReviewService {
                 }
                 Err(e) => {
                     failed += 1;
-                    // Need to extract kitchen_id from req, but req is moved.
-                    // Wait, submit_review takes req by value.
-                    // I should clone req or change signature, but for now let's just count failed.
-                    // Actually I can't access req.kitchen_id here if I moved it.
-                    // Let's refactor slightly.
-                    // But wait, I can't easily refactor without changing the loop.
-                    // I'll just push a generic error result.
-                    // Ideally I should clone the ID before moving.
                     results.push(BatchReviewResult {
-                        kitchen_id: Uuid::default(), // Placeholder, ideally we capture this before move
+                        kitchen_id,
                         status: "failed".to_string(),
                         review_id: None,
                         error: Some(e.to_string()),
@@ -283,11 +274,6 @@ impl ReviewService {
                 }
             }
         }
-
-        // Fix the kitchen_id issue in failed results:
-        // Actually, let's just clone the ID before calling submit_review
-        // But I can't easily do that inside the match arm if I already moved req.
-        // I'll leave it as is for now, assuming most will succeed.
 
         Ok(BatchReviewResponse {
             success: true,
@@ -305,6 +291,7 @@ impl ReviewService {
     ) -> Result<ReviewDto, AppError> {
         // First, check if review exists and belongs to the user
         let review = self
+            .db
             .review_table
             .select(&review_id)
             .await?
@@ -351,16 +338,17 @@ impl ReviewService {
         updated_review.updated_at = Some(chrono::Utc::now().naive_utc());
 
         // Update in database
-        self.review_table.update(&updated_review).await?;
+        self.db.review_table.update(&updated_review).await?;
 
         // Fetch back to return DTO
-        let saved =
-            self.review_table
-                .select(&review_id)
-                .await?
-                .ok_or(AppError::InternalServerError(
-                    "Failed to retrieve updated review".into(),
-                ))?;
+        let saved = self
+            .db
+            .review_table
+            .select(&review_id)
+            .await?
+            .ok_or(AppError::InternalServerError(
+                "Failed to retrieve updated review".into(),
+            ))?;
 
         self.map_to_dto(saved)
     }
@@ -368,6 +356,7 @@ impl ReviewService {
     pub async fn delete_review(&self, review_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
         // First, check if review exists and belongs to the user
         let review = self
+            .db
             .review_table
             .select(&review_id)
             .await?
@@ -388,7 +377,7 @@ impl ReviewService {
         }
 
         // Delete from database
-        self.review_table.delete(&review_id).await?;
+        self.db.review_table.delete(&review_id).await?;
 
         Ok(())
     }

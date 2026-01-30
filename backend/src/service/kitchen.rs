@@ -1,13 +1,12 @@
 //! Kitchen management service.
 
+use std::sync::Arc;
+
 use serde::Serialize;
-use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::database::Database;
 use crate::database::model::KitchenType;
-use crate::database::model::PerformanceBadge;
-use crate::database::table::KitchenTable;
-use crate::database::table::PerformanceBadgeTable;
 use crate::database::table::Table;
 use crate::error::AppError;
 
@@ -58,9 +57,19 @@ pub struct KitchenDetailDto {
     pub operating_hours: Option<String>,
     pub capacity: Option<i32>,
     #[serde(rename = "performanceBadges")]
-    pub performance_badges: Vec<PerformanceBadge>,
+    pub performance_badges: Vec<PerformanceBadgeDto>,
     #[serde(rename = "complianceTrend")]
     pub compliance_trend: Vec<ComplianceTrendDto>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PerformanceBadgeDto {
+    pub r#type: String,
+    pub title: String,
+    pub description: String,
+    #[serde(rename = "earnedDate")]
+    pub earned_date: String,
+    pub icon: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -114,19 +123,13 @@ pub struct ReviewDistributionDto {
 
 /// Service for managing kitchen data and statistics.
 pub struct KitchenService {
-    pool: PgPool,
-    kitchen_table: KitchenTable,
-    badge_table: PerformanceBadgeTable,
+    db: Arc<Database>,
 }
 
 impl KitchenService {
     /// Creates a new `KitchenService`.
-    pub fn new(pool: PgPool) -> Self {
-        Self {
-            pool: pool.clone(),
-            kitchen_table: KitchenTable::new(pool.clone()),
-            badge_table: PerformanceBadgeTable::new(pool),
-        }
+    pub fn new(db: Arc<Database>) -> Self {
+        Self { db }
     }
 
     /// Lists kitchens with optional filtering and pagination.
@@ -139,50 +142,48 @@ impl KitchenService {
         type_: Option<String>,
         min_rating: Option<f64>,
     ) -> Result<KitchenListResponse, AppError> {
-        // TODO: Implement actual filtering and pagination in DB
-        // For now, fetch all and filter in memory (not efficient but works for prototype)
-        // In production, we should add methods to KitchenTable for filtered queries
+        let (kitchens, total) = self
+            .db
+            .kitchen_table
+            .list_kitchens_with_stats(
+                q.as_deref(),
+                loc.as_deref(),
+                type_.as_deref(),
+                min_rating,
+                limit,
+                offset,
+            )
+            .await?;
 
-        let kitchens = self.kitchen_table.select_all().await?;
-
-        // Mock data for computed fields
-        let mut dtos = Vec::new();
-        for k in kitchens {
-            // Filter logic
-            if let Some(ref query) = q
-                && !k.name.to_lowercase().contains(&query.to_lowercase()) {
-                    continue;
-                }
-
-            // Map to DTO
-            dtos.push(KitchenDto {
+        let dtos = kitchens
+            .into_iter()
+            .map(|k| KitchenDto {
                 id: k.id,
-                name: k.name.clone(),
+                name: k.name,
                 location: format!(
                     "{}, {}",
-                    k.city.clone().unwrap_or_default(),
-                    k.province.clone().unwrap_or_default()
+                    k.city.unwrap_or_default(),
+                    k.province.unwrap_or_default()
                 ),
                 r#type: k.r#type,
                 meals_served: k.meals_served.unwrap_or(0),
-                certifications: vec!["Halal".to_string(), "HACCP".to_string()], // Mock
+                certifications: k
+                    .certifications
+                    .and_then(|c| serde_json::from_value(c).ok())
+                    .unwrap_or_default(),
                 image: k.image_url,
-                rating: 4.5,        // Mock
-                total_reviews: 100, // Mock
+                rating: k
+                    .average_rating
+                    .and_then(|d| d.try_into().ok())
+                    .unwrap_or(0.0),
+                total_reviews: k.total_reviews as i32,
                 created_at: k.created_at.unwrap_or_default().to_string(),
                 updated_at: k.updated_at.unwrap_or_default().to_string(),
-            });
-        }
-
-        let total = dtos.len() as i64;
-        let paginated_dtos = dtos
-            .into_iter()
-            .skip(offset as usize)
-            .take(limit as usize)
+            })
             .collect();
 
         Ok(KitchenListResponse {
-            data: paginated_dtos,
+            data: dtos,
             pagination: Pagination {
                 total,
                 limit,
@@ -194,13 +195,57 @@ impl KitchenService {
 
     pub async fn get_kitchen_detail(&self, id: Uuid) -> Result<KitchenDetailDto, AppError> {
         let kitchen = self
+            .db
             .kitchen_table
             .select(&id)
             .await?
             .ok_or(AppError::NotFound("Kitchen not found".into()))?;
 
-        // Mock badges
-        let badges = vec![];
+        // Get badges
+        let badges = self
+            .db
+            .performance_badge_table
+            .select_all()
+            .await?
+            .into_iter()
+            .filter(|b| b.kitchen_id == id)
+            .map(|b| PerformanceBadgeDto {
+                r#type: b.r#type,
+                title: b.title,
+                description: b.description,
+                earned_date: b.earned_date.to_string(),
+                icon: None,
+            })
+            .collect();
+
+        // Get compliance trend
+        let trend = self
+            .db
+            .kitchen_table
+            .get_compliance_trend(&id, 6)
+            .await?
+            .into_iter()
+            .map(|t| ComplianceTrendDto {
+                month: t.month,
+                score: t.average_score.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
+                incidents: t.incidents as i32,
+            })
+            .collect();
+
+        // Get stats for rating
+        let stats = self
+            .db
+            .kitchen_table
+            .get_kitchen_stats(&id)
+            .await?;
+
+        let rating = stats
+            .as_ref()
+            .and_then(|s| s.average_rating)
+            .and_then(|d| d.try_into().ok())
+            .unwrap_or(0.0);
+
+        let total_reviews = stats.map(|s| s.total_reviews as i32).unwrap_or(0);
 
         Ok(KitchenDetailDto {
             kitchen: KitchenDto {
@@ -213,51 +258,85 @@ impl KitchenService {
                 ),
                 r#type: kitchen.r#type,
                 meals_served: kitchen.meals_served.unwrap_or(0),
-                certifications: vec!["Halal".to_string()],
-                image: kitchen.image_url,
-                rating: 4.8,
-                total_reviews: 150,
+                certifications: kitchen
+                    .certifications
+                    .clone()
+                    .and_then(|c| serde_json::from_value(c).ok())
+                    .unwrap_or_default(),
+                image: kitchen.image_url.clone(),
+                rating,
+                total_reviews,
                 created_at: kitchen.created_at.unwrap_or_default().to_string(),
                 updated_at: kitchen.updated_at.unwrap_or_default().to_string(),
             },
             address: kitchen.address,
-            contact_phone: Some("08123456789".to_string()), // Mock
-            contact_email: Some("kitchen@example.com".to_string()), // Mock
-            operating_hours: Some("08:00 - 17:00".to_string()), // Mock
-            capacity: Some(5000),                           // Mock
+            contact_phone: None, // Not in DB model
+            contact_email: None, // Not in DB model
+            operating_hours: None, // Not in DB model
+            capacity: None,      // Not in DB model
             performance_badges: badges,
-            compliance_trend: vec![], // Mock
+            compliance_trend: trend,
         })
     }
 
     pub async fn get_kitchen_stats(&self, id: Uuid) -> Result<KitchenStatsDto, AppError> {
         // Verify kitchen exists
         let _ = self
+            .db
             .kitchen_table
             .select(&id)
             .await?
             .ok_or(AppError::NotFound("Kitchen not found".into()))?;
 
+        // Get stats from reviews
+        let stats = self
+            .db
+            .kitchen_table
+            .get_kitchen_stats(&id)
+            .await?;
+
+        // Get review distribution
+        let distribution = self
+            .db
+            .kitchen_table
+            .get_review_distribution(&id)
+            .await?;
+
+        let mut review_dist = ReviewDistributionDto::default();
+        for d in distribution {
+            match d.rating_bucket {
+                5 => review_dist.five = d.count as i32,
+                4 => review_dist.four = d.count as i32,
+                3 => review_dist.three = d.count as i32,
+                2 => review_dist.two = d.count as i32,
+                1 => review_dist.one = d.count as i32,
+                _ => {}
+            }
+        }
+
+        let haccp_scores = if let Some(ref s) = stats {
+            HaccpScoresDto {
+                taste: s.taste_avg.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
+                hygiene: s.hygiene_avg.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
+                freshness: s.freshness_avg.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
+                temperature: s.temperature_avg.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
+                packaging: s.packaging_avg.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
+                handling: s.handling_avg.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
+            }
+        } else {
+            HaccpScoresDto::default()
+        };
+
         Ok(KitchenStatsDto {
             kitchen_id: id,
-            total_reviews: 156,
-            verified_reviews: 142,
-            average_rating: 4.7,
-            haccp_scores: HaccpScoresDto {
-                taste: 4.5,
-                hygiene: 4.8,
-                freshness: 4.7,
-                temperature: 4.9,
-                packaging: 4.6,
-                handling: 4.8,
-            },
-            review_distribution: ReviewDistributionDto {
-                five: 98,
-                four: 42,
-                three: 12,
-                two: 3,
-                one: 1,
-            },
+            total_reviews: stats.as_ref().map(|s| s.total_reviews as i32).unwrap_or(0),
+            verified_reviews: stats.as_ref().map(|s| s.verified_reviews as i32).unwrap_or(0),
+            average_rating: stats
+                .and_then(|s| s.average_rating)
+                .and_then(|d| d.try_into().ok())
+                .unwrap_or(0.0),
+            haccp_scores,
+            review_distribution: review_dist,
             last_updated: chrono::Utc::now().to_rfc3339(),
         })
     }
@@ -265,7 +344,16 @@ impl KitchenService {
     pub async fn get_multiple_kitchens(&self, ids: Vec<Uuid>) -> Result<Vec<KitchenDto>, AppError> {
         let mut kitchens = Vec::new();
         for id in ids {
-            if let Ok(Some(k)) = self.kitchen_table.select(&id).await {
+            if let Ok(Some(k)) = self.db.kitchen_table.select(&id).await {
+                // Get stats for this kitchen
+                let stats = self
+                    .db
+                    .kitchen_table
+                    .get_kitchen_stats(&id)
+                    .await
+                    .ok()
+                    .flatten();
+
                 kitchens.push(KitchenDto {
                     id: k.id,
                     name: k.name,
@@ -276,10 +364,17 @@ impl KitchenService {
                     ),
                     r#type: k.r#type,
                     meals_served: k.meals_served.unwrap_or(0),
-                    certifications: vec![],
+                    certifications: k
+                        .certifications
+                        .and_then(|c| serde_json::from_value(c).ok())
+                        .unwrap_or_default(),
                     image: k.image_url,
-                    rating: 0.0,
-                    total_reviews: 0,
+                    rating: stats
+                        .as_ref()
+                        .and_then(|s| s.average_rating)
+                        .and_then(|d| d.try_into().ok())
+                        .unwrap_or(0.0),
+                    total_reviews: stats.map(|s| s.total_reviews as i32).unwrap_or(0),
                     created_at: k.created_at.unwrap_or_default().to_string(),
                     updated_at: k.updated_at.unwrap_or_default().to_string(),
                 });

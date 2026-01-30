@@ -28,7 +28,7 @@ pub async fn setup_db() -> (Arc<Database>, String) {
 }
 
 pub async fn teardown_db(db: Arc<Database>, db_name: String) {
-    db.pool.close().await;
+    db.close().await;
     let db_url = format!("postgres://postgres:password@localhost:5432/{}", db_name);
     Postgres::drop_database(&db_url)
         .await
