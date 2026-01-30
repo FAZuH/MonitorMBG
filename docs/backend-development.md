@@ -62,6 +62,41 @@ Required environment variables:
 - `PORT`: Server port (default: 3000)
 - `HOST`: Server host (default: 0.0.0.0)
 
+#### Storage Configuration
+
+The application supports multiple storage backends for file uploads:
+
+**Local Storage (Default):**
+```bash
+STORAGE_TYPE=local
+STORAGE_LOCAL_PATH=./uploads          # Directory for local file storage
+STORAGE_BASE_URL=http://localhost:3000/uploads  # Base URL for file access
+```
+
+**Amazon S3 or S3-Compatible Storage:**
+```bash
+STORAGE_TYPE=s3
+STORAGE_S3_BUCKET=my-bucket
+STORAGE_S3_REGION=us-east-1
+STORAGE_S3_ACCESS_KEY=your-access-key
+STORAGE_S3_SECRET_KEY=your-secret-key
+STORAGE_S3_ENDPOINT=https://s3.amazonaws.com  # Optional: for MinIO, etc.
+STORAGE_BASE_URL=https://my-bucket.s3.amazonaws.com
+```
+
+**Configuration Options:**
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `STORAGE_TYPE` | Storage backend type: `local` or `s3` | No | `local` |
+| `STORAGE_LOCAL_PATH` | Local directory path | No (if local) | `./uploads` |
+| `STORAGE_S3_BUCKET` | S3 bucket name | Yes (if s3) | - |
+| `STORAGE_S3_REGION` | AWS region | No | `us-east-1` |
+| `STORAGE_S3_ACCESS_KEY` | AWS access key ID | Yes (if s3) | - |
+| `STORAGE_S3_SECRET_KEY` | AWS secret access key | Yes (if s3) | - |
+| `STORAGE_S3_ENDPOINT` | Custom S3 endpoint | No | - |
+| `STORAGE_BASE_URL` | Base URL for file URLs | No | Auto-generated |
+
 ### 3. Run the Server
 
 ```bash
@@ -185,6 +220,28 @@ Database (database/)   - Data access, SQL queries
     ↓
 PostgreSQL
 ```
+
+### Storage Service Architecture
+
+The storage service provides an abstraction layer for file uploads, supporting multiple backends:
+
+```
+UtilityService
+    ↓
+StorageService (Arc<StorageBackend>)
+    ↓
+┌─────────────────┬─────────────────┐
+↓                 ↓                 ↓
+LocalStorage    S3Storage        (Extensible)
+(Local FS)      (AWS S3/MinIO)    (Future backends)
+```
+
+**Key Features:**
+- **Pluggable Backends**: Switch between local filesystem and S3 without code changes
+- **Unified API**: Same interface regardless of storage backend
+- **Health Checks**: Storage status monitored in health check endpoint
+- **Automatic Organization**: Files organized by date (YYYY/MM/DD)
+- **UUID Generation**: Unique file identifiers for collision avoidance
 
 ### Key Components
 

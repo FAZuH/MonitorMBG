@@ -3,9 +3,9 @@ graph TB
         LB["Load Balancer<br/>Nginx/ALB"]
         
         subgraph App["Application Tier"]
-            API1["API Server 1"]
-            API2["API Server 2"]
-            API3["API Server 3"]
+            Backend1["Backend 1"]
+            Backend2["Backend ..."]
+            Backend3["Backend n"]
         end
         
         subgraph Data["Data Tier"]
@@ -23,20 +23,13 @@ graph TB
     end
 
     Users["Users"] --> LB
-    LB --> API1
-    LB --> API2
-    LB --> API3
-    
-    API1 --> Primary
-    API2 --> Primary
-    API3 --> Primary
-    
+
+    LB --> Backend1
+    LB --> Backend2
+    LB --> Backend3
+
+    App --> Data
+    App --> Cache
+    App --> Storage
+
     Primary --> Replica
-    
-    API1 --> Redis
-    API2 --> Redis
-    API3 --> Redis
-    
-    API1 --> S3
-    API2 --> S3
-    API3 --> S3

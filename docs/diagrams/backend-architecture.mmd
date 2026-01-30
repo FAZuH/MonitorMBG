@@ -11,6 +11,7 @@ flowchart TB
         direction TB
         Service["Service Layer<br/>Arc<Database>"]
         Logic["Business Rules<br/>- Validation<br/>- Authorization"]
+        StorageService["Storage Service<br/>File Uploads"]
     end
 
     subgraph Data["Data Access"]
@@ -20,12 +21,21 @@ flowchart TB
         SQL["SQLx Queries<br/>Type-safe SQL"]
     end
 
+    subgraph Storage["Storage Backends"]
+        direction TB
+        Local["Local Filesystem<br/>./uploads"]
+        S3["S3 / S3-Compatible<br/>AWS / MinIO"]
+    end
+
     Req --> RL
     RL --> Auth
     Auth --> Handler
     Handler --> Service
+    Handler --> StorageService
     Service --> Logic
     Logic --> DB
+    StorageService --> Local
+    StorageService --> S3
     DB --> Tables
     Tables --> SQL
     SQL --> Postgres[(PostgreSQL)]

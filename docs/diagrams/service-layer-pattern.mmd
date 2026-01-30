@@ -33,6 +33,21 @@ classDiagram
         +get_compliance_trends()
     }
 
+    class StorageService {
+        +Arc~StorageBackend~ backend
+        +upload()
+        +download()
+        +delete()
+        +get_url()
+        +health_check()
+    }
+
+    class UtilityService {
+        +upload_image()
+        +upload_multiple_images()
+        +health_check()
+    }
+
     Service <|-- KitchenService
     Service <|-- ReviewService
     Service <|-- AuthService
@@ -52,3 +67,18 @@ classDiagram
     AuthService --> Database
     IncidentService --> Database
     StatsService --> Database
+    UtilityService --> Database
+    UtilityService --> StorageService
+    StorageService --> LocalStorage
+    StorageService --> S3Storage
+
+    class LocalStorage {
+        +base_path: PathBuf
+        +base_url: String
+    }
+
+    class S3Storage {
+        +client: ObjectStore
+        +bucket: String
+        +region: String
+    }

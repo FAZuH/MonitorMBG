@@ -1238,6 +1238,46 @@ Returns API health status.
 
 ---
 
+### Storage Backend Configuration
+
+The API supports multiple storage backends for file uploads. The backend is configured via environment variables and is transparent to API clients.
+
+**Supported Backends:**
+
+| Backend | Type | Use Case |
+|---------|------|----------|
+| Local Filesystem | `local` | Development, single-server deployments |
+| Amazon S3 | `s3` | Production, scalable storage |
+| S3-Compatible | `s3` | MinIO, DigitalOcean Spaces, etc. |
+
+**File Organization:**
+
+Files are automatically organized by upload date:
+```
+uploads/
+├── 2025/
+│   ├── 01/
+│   │   ├── 30/
+│   │   │   ├── 550e8400-e29b-41d4-a716-446655440000.jpg
+│   │   │   └── ...
+│   │   └── 31/
+│   └── 02/
+└── ...
+```
+
+**File URL Format:**
+
+- **Local**: `http://localhost:3000/uploads/2025/01/30/{file_id}`
+- **S3**: `https://{bucket}.s3.{region}.amazonaws.com/uploads/2025/01/30/{file_id}`
+
+**Storage Health Status:**
+
+The health check endpoint reports storage status:
+- `healthy`: Storage backend is accessible and operational
+- `unhealthy`: Storage backend is inaccessible or experiencing issues
+
+---
+
 ## TypeScript Type Definitions
 
 ```typescript
