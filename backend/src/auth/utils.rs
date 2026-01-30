@@ -3,18 +3,18 @@
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
-use argon2::Argon2;
+use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::PasswordHash;
 use argon2::password_hash::PasswordHasher;
 use argon2::password_hash::PasswordVerifier;
 use argon2::password_hash::SaltString;
-use argon2::password_hash::rand_core::OsRng;
+use argon2::Argon2;
+use jsonwebtoken::decode;
+use jsonwebtoken::encode;
 use jsonwebtoken::DecodingKey;
 use jsonwebtoken::EncodingKey;
 use jsonwebtoken::Header;
 use jsonwebtoken::Validation;
-use jsonwebtoken::decode;
-use jsonwebtoken::encode;
 use serde::Deserialize;
 use serde::Serialize;
 use uuid::Uuid;
@@ -93,20 +93,70 @@ pub fn validate_token(token: &str, secret: &str) -> Result<Claims, AppError> {
 
 #[cfg(test)]
 mod tests {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use uuid::Uuid;
 
     use super::*;
 
     #[test]
-    fn test_password_hashing() {
+    fn test_password_hashing_success() {
         let password = "password123";
         let hash = hash_password(password).unwrap();
+
+        // Verify the hash is not empty and different from original password
+        assert!(!hash.is_empty());
+        assert_ne!(hash, password);
+
+        // Verify correct password matches
         assert!(verify_password(password, &hash).unwrap());
-        assert!(!verify_password("wrongpassword", &hash).unwrap());
     }
 
     #[test]
-    fn test_jwt_token() {
+    fn test_password_hashing_wrong_password() {
+        let password = "password123";
+        let hash = hash_password(password).unwrap();
+
+        // Verify wrong password doesn't match
+        assert!(!verify_password("wrongpassword", &hash).unwrap());
+        assert!(!verify_password("", &hash).unwrap());
+        assert!(!verify_password("password1234", &hash).unwrap());
+    }
+
+    #[test]
+    fn test_password_hashing_different_salts() {
+        let password = "password123";
+        let hash1 = hash_password(password).unwrap();
+        let hash2 = hash_password(password).unwrap();
+
+        // Same password should produce different hashes due to different salts
+        assert_ne!(hash1, hash2);
+
+        // But both should verify correctly
+        assert!(verify_password(password, &hash1).unwrap());
+        assert!(verify_password(password, &hash2).unwrap());
+    }
+
+    #[test]
+    fn test_password_hashing_empty_password() {
+        let password = "";
+        let hash = hash_password(password).unwrap();
+
+        // Empty password should still hash and verify
+        assert!(verify_password(password, &hash).unwrap());
+    }
+
+    #[test]
+    fn test_password_hashing_long_password() {
+        let password = "a".repeat(1000);
+        let hash = hash_password(&password).unwrap();
+
+        // Long password should still work
+        assert!(verify_password(&password, &hash).unwrap());
+    }
+
+    #[test]
+    fn test_jwt_token_generation_and_validation() {
         let user_id = Uuid::new_v4();
         let role = UserRole::Kitchen;
         let secret = "test_secret";
@@ -117,6 +167,23 @@ mod tests {
         assert_eq!(claims.sub, user_id);
         assert_eq!(claims.role, role);
         assert!(claims.iat > 0);
+        assert!(claims.exp > claims.iat);
+
+        // Token should expire in approximately 1 hour (3600 seconds)
+        let expected_exp = claims.iat + 3600;
+        assert_eq!(claims.exp, expected_exp);
+    }
+
+    #[test]
+    fn test_jwt_token_different_roles() {
+        let user_id = Uuid::new_v4();
+        let secret = "test_secret";
+
+        for role in [UserRole::Admin, UserRole::Kitchen, UserRole::School] {
+            let token = generate_token(user_id, role, secret).unwrap();
+            let claims = validate_token(&token, secret).unwrap();
+            assert_eq!(claims.role, role);
+        }
     }
 
     #[test]
@@ -130,5 +197,70 @@ mod tests {
         let result = validate_token(&token, wrong_secret);
 
         assert!(result.is_err());
+        match result {
+            Err(AppError::Unauthorized(_)) => (),
+            _ => panic!("Expected Unauthorized error"),
+        }
+    }
+
+    #[test]
+    fn test_jwt_token_malformed_token() {
+        let secret = "test_secret";
+
+        let result = validate_token("not.a.valid.token", secret);
+        assert!(result.is_err());
+
+        let result = validate_token("", secret);
+        assert!(result.is_err());
+
+        let result = validate_token("invalid", secret);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_jwt_token_tampered() {
+        let user_id = Uuid::new_v4();
+        let role = UserRole::Kitchen;
+        let secret = "test_secret";
+
+        let token = generate_token(user_id, role, secret).unwrap();
+
+        // Tamper with the token by changing a character
+        let mut tampered = token.clone();
+        if let Some(last) = tampered.pop() {
+            tampered.push(if last == 'a' { 'b' } else { 'a' });
+        }
+
+        let result = validate_token(&tampered, secret);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_claims_structure() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as usize;
+
+        let claims = Claims {
+            sub: Uuid::new_v4(),
+            role: UserRole::Admin,
+            exp: now + 3600,
+            iat: now,
+        };
+
+        // Test serialization
+        let json = serde_json::to_string(&claims).unwrap();
+        assert!(json.contains("sub"));
+        assert!(json.contains("role"));
+        assert!(json.contains("exp"));
+        assert!(json.contains("iat"));
+
+        // Test deserialization
+        let decoded: Claims = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded.sub, claims.sub);
+        assert_eq!(decoded.role, claims.role);
+        assert_eq!(decoded.exp, claims.exp);
+        assert_eq!(decoded.iat, claims.iat);
     }
 }
