@@ -8,4 +8,5 @@ pub mod incident;
 pub mod kitchen;
 pub mod review;
 pub mod stats;
+pub mod storage;
 pub mod utility;

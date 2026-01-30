@@ -30,6 +30,7 @@ use backend::service::incident::IncidentService;
 use backend::service::kitchen::KitchenService;
 use backend::service::review::ReviewService;
 use backend::service::stats::StatsService;
+use backend::service::storage::StorageService;
 use backend::service::utility::UtilityService;
 use dotenv::dotenv;
 use log::debug;
@@ -86,13 +87,18 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn setup_routes(config: Arc<Config>, db: Arc<Database>) -> Router {
+    // Setup Storage Service
+    let storage_service = Arc::new(
+        StorageService::new(&config.storage).expect("Failed to initialize storage service"),
+    );
+
     // Setup Services
     let auth_service = Arc::new(AuthService::new(db.clone(), config.clone()));
     let kitchen_service = Arc::new(KitchenService::new(db.clone()));
     let review_service = Arc::new(ReviewService::new(db.clone()));
     let incident_service = Arc::new(IncidentService::new(db.clone()));
     let stats_service = Arc::new(StatsService::new(db.clone()));
-    let utility_service = Arc::new(UtilityService::new(db.clone()));
+    let utility_service = Arc::new(UtilityService::new(db.clone(), storage_service));
 
     // Setup States
     let auth_state = AuthState {

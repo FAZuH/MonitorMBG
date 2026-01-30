@@ -4,6 +4,27 @@
 
 use crate::error::AppError;
 
+/// Storage configuration for file uploads.
+#[derive(Clone, Default)]
+pub struct StorageConfig {
+    /// Type of storage backend: "local" or "s3".
+    pub storage_type: String,
+    /// For local storage: path to store files.
+    pub local_path: Option<String>,
+    /// For S3 storage: bucket name.
+    pub bucket: Option<String>,
+    /// For S3 storage: AWS region.
+    pub region: Option<String>,
+    /// For S3 storage: access key ID.
+    pub access_key: Option<String>,
+    /// For S3 storage: secret access key.
+    pub secret_key: Option<String>,
+    /// For S3 storage: custom endpoint URL (for MinIO, etc.).
+    pub endpoint: Option<String>,
+    /// Base URL for generating file URLs.
+    pub base_url: Option<String>,
+}
+
 /// Application configuration structure.
 #[derive(Clone, Default)]
 pub struct Config {
@@ -17,6 +38,8 @@ pub struct Config {
     pub host: String,
     /// Port number to bind the server to.
     pub port: u16,
+    /// Storage configuration for file uploads.
+    pub storage: StorageConfig,
 }
 
 impl Config {
@@ -51,6 +74,18 @@ impl Config {
             .map_err(|_| AppError::ConfigurationError {
                 msg: "PORT must be a number".to_string(),
             })?;
+
+        // Load storage configuration
+        self.storage = StorageConfig {
+            storage_type: std::env::var("STORAGE_TYPE").unwrap_or("local".to_string()),
+            local_path: std::env::var("STORAGE_LOCAL_PATH").ok(),
+            bucket: std::env::var("STORAGE_S3_BUCKET").ok(),
+            region: std::env::var("STORAGE_S3_REGION").ok(),
+            access_key: std::env::var("STORAGE_S3_ACCESS_KEY").ok(),
+            secret_key: std::env::var("STORAGE_S3_SECRET_KEY").ok(),
+            endpoint: std::env::var("STORAGE_S3_ENDPOINT").ok(),
+            base_url: std::env::var("STORAGE_BASE_URL").ok(),
+        };
 
         Ok(())
     }
