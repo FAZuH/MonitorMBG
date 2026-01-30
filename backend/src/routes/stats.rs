@@ -54,7 +54,6 @@ pub struct IncidentTrendsQuery {
 
 /// Handler for getting national statistics.
 pub async fn get_national_stats_handler(
-
     State(state): State<StatsState>,
     Query(query): Query<NationalStatsQuery>,
 ) -> Result<impl IntoResponse, AppError> {

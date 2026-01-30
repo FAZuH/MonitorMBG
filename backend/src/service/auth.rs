@@ -127,10 +127,11 @@ impl AuthService {
         };
 
         if let Some(user) = user_found
-            && password_valid {
-                let token = generate_token(user.id, user.role, &self.config.jwt_secret)?;
-                return Ok((token, user));
-            }
+            && password_valid
+        {
+            let token = generate_token(user.id, user.role, &self.config.jwt_secret)?;
+            return Ok((token, user));
+        }
 
         Err(AppError::Unauthorized("Invalid credentials".to_string()))
     }

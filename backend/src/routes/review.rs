@@ -60,7 +60,6 @@ pub struct BatchReviewsRequest {
 
 /// Handler for submitting a review.
 pub async fn submit_review_handler(
-
     State(state): State<ReviewState>,
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateReviewRequest>,

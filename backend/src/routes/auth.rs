@@ -47,7 +47,6 @@ pub struct AuthResponse {
 
 /// Handler for user registration.
 pub async fn register_handler(
-
     State(state): State<AuthState>,
     Json(mut payload): Json<RegisterRequest>,
 ) -> Result<impl IntoResponse, AppError> {

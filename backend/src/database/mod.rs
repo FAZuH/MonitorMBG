@@ -16,9 +16,8 @@ pub mod error;
 pub mod model;
 pub mod table;
 
-use table::*;
-
 pub use table::StatsQueries;
+use table::*;
 
 /// Central database manager.
 ///

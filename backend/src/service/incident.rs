@@ -159,11 +159,7 @@ impl IncidentService {
             .await?;
 
         // Get timeline events
-        let timeline_events = self
-            .db
-            .incident_table
-            .get_timeline_events(&id)
-            .await?;
+        let timeline_events = self.db.incident_table.get_timeline_events(&id).await?;
 
         let timeline = timeline_events
             .into_iter()
@@ -175,11 +171,7 @@ impl IncidentService {
             .collect();
 
         // Get lab results
-        let lab_results = self
-            .db
-            .incident_table
-            .get_lab_results(&id)
-            .await?;
+        let lab_results = self.db.incident_table.get_lab_results(&id).await?;
 
         let laboratory_results = lab_results.map(|lr| LaboratoryResultsDto {
             pathogen: lr.pathogen,
@@ -195,11 +187,7 @@ impl IncidentService {
             .await?;
 
         // Get corrective actions
-        let corrective_actions = self
-            .db
-            .incident_table
-            .get_corrective_actions(&id)
-            .await?;
+        let corrective_actions = self.db.incident_table.get_corrective_actions(&id).await?;
 
         let dto = self.map_to_dto(incident);
 

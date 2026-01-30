@@ -157,14 +157,14 @@ impl ReviewService {
         let id = self.db.review_table.insert(&review).await?;
 
         // Fetch back to return DTO
-        let saved = self
-            .db
-            .review_table
-            .select(&id)
-            .await?
-            .ok_or(AppError::InternalServerError(
-                "Failed to retrieve saved review".into(),
-            ))?;
+        let saved =
+            self.db
+                .review_table
+                .select(&id)
+                .await?
+                .ok_or(AppError::InternalServerError(
+                    "Failed to retrieve saved review".into(),
+                ))?;
 
         self.map_to_dto(saved)
     }
@@ -341,14 +341,14 @@ impl ReviewService {
         self.db.review_table.update(&updated_review).await?;
 
         // Fetch back to return DTO
-        let saved = self
-            .db
-            .review_table
-            .select(&review_id)
-            .await?
-            .ok_or(AppError::InternalServerError(
-                "Failed to retrieve updated review".into(),
-            ))?;
+        let saved =
+            self.db
+                .review_table
+                .select(&review_id)
+                .await?
+                .ok_or(AppError::InternalServerError(
+                    "Failed to retrieve updated review".into(),
+                ))?;
 
         self.map_to_dto(saved)
     }

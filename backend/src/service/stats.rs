@@ -303,7 +303,12 @@ impl StatsService {
         let trends = self
             .db
             .stats_queries
-            .get_compliance_trends(province.as_deref(), kabupaten.as_deref(), kitchen_id, months)
+            .get_compliance_trends(
+                province.as_deref(),
+                kabupaten.as_deref(),
+                kitchen_id,
+                months,
+            )
             .await?;
 
         let total_reviews: i32 = trends.iter().map(|t| t.reviews as i32).sum();
@@ -409,7 +414,8 @@ impl StatsService {
         let total_deaths: i32 = trends.iter().map(|t| t.deaths as i32).sum();
 
         // Determine most common cause
-        let mut cause_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
+        let mut cause_counts: std::collections::HashMap<String, i32> =
+            std::collections::HashMap::new();
         for t in &trends {
             if let Some(ref cause) = t.top_cause {
                 *cause_counts.entry(cause.clone()).or_insert(0) += 1;

@@ -40,7 +40,6 @@ pub struct BatchKitchensQuery {
 
 /// Handler for listing kitchens.
 pub async fn list_kitchens_handler(
-
     State(state): State<KitchenState>,
     Query(query): Query<ListKitchensQuery>,
 ) -> Result<impl IntoResponse, AppError> {

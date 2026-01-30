@@ -285,7 +285,7 @@ impl KitchenTable {
         .bind(kitchen_id)
         .fetch_optional(&self.base.pool)
         .await?;
-        
+
         Ok(stats)
     }
 
@@ -308,7 +308,7 @@ impl KitchenTable {
         .bind(kitchen_id)
         .fetch_all(&self.base.pool)
         .await?;
-        
+
         Ok(distribution)
     }
 
@@ -337,7 +337,7 @@ impl KitchenTable {
         .bind(months)
         .fetch_all(&self.base.pool)
         .await?;
-        
+
         Ok(trend)
     }
 
@@ -353,7 +353,7 @@ impl KitchenTable {
     ) -> Result<(Vec<KitchenWithStats>, i64), DatabaseError> {
         // Build the query dynamically
         let mut conditions = vec!["1=1"];
-        
+
         if query.is_some() {
             conditions.push("k.name ILIKE $1");
         }
@@ -366,9 +366,9 @@ impl KitchenTable {
         if min_rating.is_some() {
             conditions.push("COALESCE(stats.average_rating, 0) >= $4");
         }
-        
+
         let where_clause = conditions.join(" AND ");
-        
+
         // Count query
         let count_sql = format!(
             r#"
@@ -385,9 +385,9 @@ impl KitchenTable {
             "#,
             where_clause
         );
-        
+
         let mut count_query = sqlx::query_scalar::<_, i64>(&count_sql);
-        
+
         if let Some(q) = query {
             count_query = count_query.bind(format!("%{}%", q));
         }
@@ -400,9 +400,9 @@ impl KitchenTable {
         if let Some(r) = min_rating {
             count_query = count_query.bind(rust_decimal::Decimal::from_f64(r).unwrap_or_default());
         }
-        
+
         let total = count_query.fetch_one(&self.base.pool).await?;
-        
+
         // Data query
         let data_sql = format!(
             r#"
@@ -435,9 +435,9 @@ impl KitchenTable {
             "#,
             where_clause
         );
-        
+
         let mut data_query = sqlx::query_as::<_, KitchenWithStats>(&data_sql);
-        
+
         if let Some(q) = query {
             data_query = data_query.bind(format!("%{}%", q));
         }
@@ -450,25 +450,26 @@ impl KitchenTable {
         if let Some(r) = min_rating {
             data_query = data_query.bind(rust_decimal::Decimal::from_f64(r).unwrap_or_default());
         }
-        
+
         let kitchens = data_query
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.base.pool)
             .await?;
-        
+
         Ok((kitchens, total))
     }
 
     /// Get kitchen name by ID
-    pub async fn get_kitchen_name(&self, kitchen_id: &Uuid) -> Result<Option<String>, DatabaseError> {
-        let name = sqlx::query_scalar::<_, String>(
-            r#"SELECT name FROM kitchens WHERE id = $1"#,
-        )
-        .bind(kitchen_id)
-        .fetch_optional(&self.base.pool)
-        .await?;
-        
+    pub async fn get_kitchen_name(
+        &self,
+        kitchen_id: &Uuid,
+    ) -> Result<Option<String>, DatabaseError> {
+        let name = sqlx::query_scalar::<_, String>(r#"SELECT name FROM kitchens WHERE id = $1"#)
+            .bind(kitchen_id)
+            .fetch_optional(&self.base.pool)
+            .await?;
+
         Ok(name)
     }
 }
@@ -587,7 +588,7 @@ impl IncidentTable {
         .bind(incident_id)
         .fetch_optional(&self.base.pool)
         .await?;
-        
+
         Ok(incident)
     }
 
@@ -628,7 +629,7 @@ impl IncidentTable {
         .bind(incident_id)
         .fetch_all(&self.base.pool)
         .await?;
-        
+
         Ok(events)
     }
 
@@ -654,7 +655,7 @@ impl IncidentTable {
         .bind(incident_id)
         .fetch_optional(&self.base.pool)
         .await?;
-        
+
         Ok(result)
     }
 
@@ -697,7 +698,7 @@ impl IncidentTable {
         .bind(incident_id)
         .fetch_all(&self.base.pool)
         .await?;
-        
+
         Ok(actions)
     }
 
@@ -711,7 +712,7 @@ impl IncidentTable {
         offset: i64,
     ) -> Result<(Vec<Incident>, i64), DatabaseError> {
         let mut conditions = vec!["1=1"];
-        
+
         if status.is_some() {
             conditions.push("status::text = $1");
         }
@@ -721,17 +722,14 @@ impl IncidentTable {
         if min_victims.is_some() {
             conditions.push("COALESCE(affected_count, 0) >= $3");
         }
-        
+
         let where_clause = conditions.join(" AND ");
-        
+
         // Count query
-        let count_sql = format!(
-            r#"SELECT COUNT(*) FROM incidents WHERE {}"#,
-            where_clause
-        );
-        
+        let count_sql = format!(r#"SELECT COUNT(*) FROM incidents WHERE {}"#, where_clause);
+
         let mut count_query = sqlx::query_scalar::<_, i64>(&count_sql);
-        
+
         if let Some(s) = status {
             count_query = count_query.bind(s);
         }
@@ -741,9 +739,9 @@ impl IncidentTable {
         if let Some(mv) = min_victims {
             count_query = count_query.bind(mv);
         }
-        
+
         let total = count_query.fetch_one(&self.base.pool).await?;
-        
+
         // Data query
         let data_sql = format!(
             r#"
@@ -754,9 +752,9 @@ impl IncidentTable {
             "#,
             where_clause
         );
-        
+
         let mut data_query = sqlx::query_as::<_, Incident>(&data_sql);
-        
+
         if let Some(s) = status {
             data_query = data_query.bind(s);
         }
@@ -766,13 +764,13 @@ impl IncidentTable {
         if let Some(mv) = min_victims {
             data_query = data_query.bind(mv);
         }
-        
+
         let incidents = data_query
             .bind(limit)
             .bind(offset)
             .fetch_all(&self.base.pool)
             .await?;
-        
+
         Ok((incidents, total))
     }
 }
@@ -866,7 +864,7 @@ impl StatsQueries {
         )
         .fetch_one(&self.pool)
         .await?;
-        
+
         Ok(stats)
     }
 
@@ -888,7 +886,7 @@ impl StatsQueries {
         )
         .fetch_all(&self.pool)
         .await?;
-        
+
         Ok(stats)
     }
 
@@ -899,16 +897,16 @@ impl StatsQueries {
         kabupaten: Option<&str>,
     ) -> Result<RegionalStats, DatabaseError> {
         let mut conditions = vec!["1=1"];
-        
+
         if province.is_some() {
             conditions.push("province = $1");
         }
         if kabupaten.is_some() {
             conditions.push("city = $2");
         }
-        
+
         let where_clause = conditions.join(" AND ");
-        
+
         let sql = format!(
             r#"
             SELECT 
@@ -927,18 +925,18 @@ impl StatsQueries {
             "#,
             where_clause
         );
-        
+
         let mut query = sqlx::query_as::<_, RegionalStats>(&sql);
-        
+
         if let Some(p) = province {
             query = query.bind(p);
         }
         if let Some(k) = kabupaten {
             query = query.bind(k);
         }
-        
+
         let stats = query.fetch_one(&self.pool).await?;
-        
+
         Ok(stats)
     }
 
@@ -950,16 +948,16 @@ impl StatsQueries {
         limit: i64,
     ) -> Result<Vec<TopKitchen>, DatabaseError> {
         let mut conditions = vec!["1=1"];
-        
+
         if province.is_some() {
             conditions.push("k.province = $1");
         }
         if kabupaten.is_some() {
             conditions.push("k.city = $2");
         }
-        
+
         let where_clause = conditions.join(" AND ");
-        
+
         let sql = format!(
             r#"
             SELECT 
@@ -977,18 +975,18 @@ impl StatsQueries {
             "#,
             where_clause
         );
-        
+
         let mut query = sqlx::query_as::<_, TopKitchen>(&sql);
-        
+
         if let Some(p) = province {
             query = query.bind(p);
         }
         if let Some(k) = kabupaten {
             query = query.bind(k);
         }
-        
+
         let kitchens = query.bind(limit).fetch_all(&self.pool).await?;
-        
+
         Ok(kitchens)
     }
 
@@ -1000,8 +998,9 @@ impl StatsQueries {
         kitchen_id: Option<Uuid>,
         months: i32,
     ) -> Result<Vec<ComplianceTrendData>, DatabaseError> {
-        let mut conditions = vec!["r.created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month' * $1)"];
-        
+        let mut conditions =
+            vec!["r.created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month' * $1)"];
+
         if province.is_some() {
             conditions.push("k.province = $2");
         }
@@ -1011,9 +1010,9 @@ impl StatsQueries {
         if kitchen_id.is_some() {
             conditions.push("r.kitchen_id = $4");
         }
-        
+
         let where_clause = conditions.join(" AND ");
-        
+
         let sql = format!(
             r#"
             SELECT 
@@ -1033,31 +1032,31 @@ impl StatsQueries {
             "#,
             where_clause
         );
-        
+
         let mut query = sqlx::query_as::<_, ComplianceTrendData>(&sql);
-        
+
         query = query.bind(months);
-        
+
         if let Some(p) = province {
             query = query.bind(p);
         } else {
             query = query.bind("");
         }
-        
+
         if let Some(k) = kabupaten {
             query = query.bind(k);
         } else {
             query = query.bind("");
         }
-        
+
         if let Some(id) = kitchen_id {
             query = query.bind(id);
         } else {
             query = query.bind(Uuid::nil());
         }
-        
+
         let trends = query.fetch_all(&self.pool).await?;
-        
+
         Ok(trends)
     }
 
@@ -1067,14 +1066,15 @@ impl StatsQueries {
         province: Option<&str>,
         months: i32,
     ) -> Result<Vec<IncidentTrend>, DatabaseError> {
-        let mut conditions = vec!["date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month' * $1)"];
-        
+        let mut conditions =
+            vec!["date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month' * $1)"];
+
         if province.is_some() {
             conditions.push("province = $2");
         }
-        
+
         let where_clause = conditions.join(" AND ");
-        
+
         let sql = format!(
             r#"
             SELECT 
@@ -1090,17 +1090,17 @@ impl StatsQueries {
             "#,
             where_clause
         );
-        
+
         let mut query = sqlx::query_as::<_, IncidentTrend>(&sql);
-        
+
         query = query.bind(months);
-        
+
         if let Some(p) = province {
             query = query.bind(p);
         }
-        
+
         let trends = query.fetch_all(&self.pool).await?;
-        
+
         Ok(trends)
     }
 }

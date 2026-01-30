@@ -227,17 +227,16 @@ impl KitchenService {
             .into_iter()
             .map(|t| ComplianceTrendDto {
                 month: t.month,
-                score: t.average_score.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
+                score: t
+                    .average_score
+                    .and_then(|d| d.try_into().ok())
+                    .unwrap_or(0.0),
                 incidents: t.incidents as i32,
             })
             .collect();
 
         // Get stats for rating
-        let stats = self
-            .db
-            .kitchen_table
-            .get_kitchen_stats(&id)
-            .await?;
+        let stats = self.db.kitchen_table.get_kitchen_stats(&id).await?;
 
         let rating = stats
             .as_ref()
@@ -270,10 +269,10 @@ impl KitchenService {
                 updated_at: kitchen.updated_at.unwrap_or_default().to_string(),
             },
             address: kitchen.address,
-            contact_phone: None, // Not in DB model
-            contact_email: None, // Not in DB model
+            contact_phone: None,   // Not in DB model
+            contact_email: None,   // Not in DB model
             operating_hours: None, // Not in DB model
-            capacity: None,      // Not in DB model
+            capacity: None,        // Not in DB model
             performance_badges: badges,
             compliance_trend: trend,
         })
@@ -289,18 +288,10 @@ impl KitchenService {
             .ok_or(AppError::NotFound("Kitchen not found".into()))?;
 
         // Get stats from reviews
-        let stats = self
-            .db
-            .kitchen_table
-            .get_kitchen_stats(&id)
-            .await?;
+        let stats = self.db.kitchen_table.get_kitchen_stats(&id).await?;
 
         // Get review distribution
-        let distribution = self
-            .db
-            .kitchen_table
-            .get_review_distribution(&id)
-            .await?;
+        let distribution = self.db.kitchen_table.get_review_distribution(&id).await?;
 
         let mut review_dist = ReviewDistributionDto::default();
         for d in distribution {
@@ -318,10 +309,22 @@ impl KitchenService {
             HaccpScoresDto {
                 taste: s.taste_avg.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
                 hygiene: s.hygiene_avg.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
-                freshness: s.freshness_avg.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
-                temperature: s.temperature_avg.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
-                packaging: s.packaging_avg.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
-                handling: s.handling_avg.and_then(|d| d.try_into().ok()).unwrap_or(0.0),
+                freshness: s
+                    .freshness_avg
+                    .and_then(|d| d.try_into().ok())
+                    .unwrap_or(0.0),
+                temperature: s
+                    .temperature_avg
+                    .and_then(|d| d.try_into().ok())
+                    .unwrap_or(0.0),
+                packaging: s
+                    .packaging_avg
+                    .and_then(|d| d.try_into().ok())
+                    .unwrap_or(0.0),
+                handling: s
+                    .handling_avg
+                    .and_then(|d| d.try_into().ok())
+                    .unwrap_or(0.0),
             }
         } else {
             HaccpScoresDto::default()
@@ -330,7 +333,10 @@ impl KitchenService {
         Ok(KitchenStatsDto {
             kitchen_id: id,
             total_reviews: stats.as_ref().map(|s| s.total_reviews as i32).unwrap_or(0),
-            verified_reviews: stats.as_ref().map(|s| s.verified_reviews as i32).unwrap_or(0),
+            verified_reviews: stats
+                .as_ref()
+                .map(|s| s.verified_reviews as i32)
+                .unwrap_or(0),
             average_rating: stats
                 .and_then(|s| s.average_rating)
                 .and_then(|d| d.try_into().ok())

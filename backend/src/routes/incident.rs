@@ -38,7 +38,6 @@ pub struct ListIncidentsQuery {
 
 /// Handler for listing incidents.
 pub async fn list_incidents_handler(
-
     State(state): State<IncidentState>,
     Query(query): Query<ListIncidentsQuery>,
 ) -> Result<impl IntoResponse, AppError> {
