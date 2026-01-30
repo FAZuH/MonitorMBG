@@ -91,6 +91,11 @@ We provide a convenient development script at `/dev.sh`:
 ./dev.sh build             # Build application
 ./dev.sh precommit         # Run all pre-commit checks
 
+# Multiple commands (executed left to right)
+./dev.sh backend format lint        # Format then lint backend
+./dev.sh format lint test           # Format, lint, then test (backend default)
+./dev.sh backend precommit          # Run all pre-commit checks
+
 # Frontend commands
 ./dev.sh frontend test     # Run frontend tests
 ./dev.sh frontend build    # Build frontend
