@@ -71,6 +71,6 @@ pub async fn get_incident_detail_handler(
 pub fn incident_routes(state: IncidentState) -> Router {
     Router::new()
         .route("/", get(list_incidents_handler))
-        .route("/:id", get(get_incident_detail_handler))
+        .route("/{id}", get(get_incident_detail_handler))
         .with_state(state)
 }

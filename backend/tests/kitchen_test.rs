@@ -283,7 +283,7 @@ async fn test_get_kitchen_detail_success() {
     };
 
     let app = Router::new()
-        .route("/:id", get(get_kitchen_detail_handler))
+        .route("/{id}", get(get_kitchen_detail_handler))
         .with_state(state);
 
     let response = app
@@ -313,7 +313,7 @@ async fn test_get_kitchen_detail_not_found() {
     };
 
     let app = Router::new()
-        .route("/:id", get(get_kitchen_detail_handler))
+        .route("/{id}", get(get_kitchen_detail_handler))
         .with_state(state);
 
     let non_existent_id = Uuid::new_v4();
@@ -357,7 +357,7 @@ async fn test_get_kitchen_stats_success() {
     };
 
     let app = Router::new()
-        .route("/:id/stats", get(get_kitchen_stats_handler))
+        .route("/{id}/stats", get(get_kitchen_stats_handler))
         .with_state(state);
 
     let response = app
@@ -387,7 +387,7 @@ async fn test_get_kitchen_stats_not_found() {
     };
 
     let app = Router::new()
-        .route("/:id/stats", get(get_kitchen_stats_handler))
+        .route("/{id}/stats", get(get_kitchen_stats_handler))
         .with_state(state);
 
     let non_existent_id = Uuid::new_v4();
@@ -448,7 +448,7 @@ async fn test_get_multiple_kitchens_success() {
         .oneshot(
             Request::builder()
                 .method("GET")
-                .uri(format!("/batch?ids={}, {}", id1, id2))
+                .uri(format!("/batch?ids={},{}", id1, id2))
                 .body(Body::empty())
                 .unwrap(),
         )

@@ -144,7 +144,7 @@ impl ReviewService {
             handling_rating: Decimal::from_f64(req.ratings.handling).unwrap_or_default(),
             comment: req.comment.clone(),
             photos: req.photos.clone().map(|p| json!(p)),
-            verification_status: Some("pending".to_string()),
+            verification_status: Some("unverified".to_string()),
             report_source: "public".to_string(),
             confidence_level: "medium".to_string(),
             verified: Some(false),

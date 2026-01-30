@@ -352,19 +352,30 @@ impl KitchenTable {
         offset: i64,
     ) -> Result<(Vec<KitchenWithStats>, i64), DatabaseError> {
         // Build the query dynamically
-        let mut conditions = vec!["1=1"];
+        let mut conditions: Vec<String> = vec!["1=1".to_string()];
+        let mut param_idx = 1;
 
         if query.is_some() {
-            conditions.push("k.name ILIKE $1");
+            conditions.push(format!("k.name ILIKE ${}", param_idx));
+            param_idx += 1;
         }
         if location.is_some() {
-            conditions.push("(k.city ILIKE $2 OR k.province ILIKE $2)");
+            conditions.push(format!(
+                "(k.city ILIKE ${} OR k.province ILIKE ${})",
+                param_idx, param_idx
+            ));
+            param_idx += 1;
         }
         if kitchen_type.is_some() {
-            conditions.push("k.type::text = $3");
+            conditions.push(format!("k.type::text = ${}", param_idx));
+            param_idx += 1;
         }
         if min_rating.is_some() {
-            conditions.push("COALESCE(stats.average_rating, 0) >= $4");
+            conditions.push(format!(
+                "COALESCE(stats.average_rating, 0) >= ${}",
+                param_idx
+            ));
+            param_idx += 1;
         }
 
         let where_clause = conditions.join(" AND ");
@@ -403,7 +414,7 @@ impl KitchenTable {
 
         let total = count_query.fetch_one(&self.base.pool).await?;
 
-        // Data query
+        // Data query - use sequential parameter indices
         let data_sql = format!(
             r#"
             SELECT 
@@ -431,9 +442,11 @@ impl KitchenTable {
             ) stats ON k.id = stats.kitchen_id
             WHERE {}
             ORDER BY stats.average_rating DESC NULLS LAST
-            LIMIT $5 OFFSET $6
+            LIMIT ${} OFFSET ${}
             "#,
-            where_clause
+            where_clause,
+            param_idx,
+            param_idx + 1
         );
 
         let mut data_query = sqlx::query_as::<_, KitchenWithStats>(&data_sql);
@@ -711,16 +724,20 @@ impl IncidentTable {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Incident>, i64), DatabaseError> {
-        let mut conditions = vec!["1=1"];
+        let mut conditions: Vec<String> = vec!["1=1".to_string()];
+        let mut param_idx = 1;
 
         if status.is_some() {
-            conditions.push("status::text = $1");
+            conditions.push(format!("status::text = ${}", param_idx));
+            param_idx += 1;
         }
         if province.is_some() {
-            conditions.push("province ILIKE $2");
+            conditions.push(format!("province ILIKE ${}", param_idx));
+            param_idx += 1;
         }
         if min_victims.is_some() {
-            conditions.push("COALESCE(affected_count, 0) >= $3");
+            conditions.push(format!("COALESCE(affected_count, 0) >= ${}", param_idx));
+            param_idx += 1;
         }
 
         let where_clause = conditions.join(" AND ");
@@ -742,15 +759,17 @@ impl IncidentTable {
 
         let total = count_query.fetch_one(&self.base.pool).await?;
 
-        // Data query
+        // Data query - use sequential parameter indices
         let data_sql = format!(
             r#"
             SELECT * FROM incidents
             WHERE {}
             ORDER BY date DESC
-            LIMIT $4 OFFSET $5
+            LIMIT ${} OFFSET ${}
             "#,
-            where_clause
+            where_clause,
+            param_idx,
+            param_idx + 1
         );
 
         let mut data_query = sqlx::query_as::<_, Incident>(&data_sql);

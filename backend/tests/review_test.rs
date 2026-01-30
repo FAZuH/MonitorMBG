@@ -239,7 +239,7 @@ async fn test_get_kitchen_reviews() {
     };
 
     let app = Router::new()
-        .route("/kitchen/:kitchenId", get(get_kitchen_reviews_handler))
+        .route("/kitchen/{kitchenId}", get(get_kitchen_reviews_handler))
         .with_state(state);
 
     let response = app
@@ -356,7 +356,7 @@ async fn test_update_review_success() {
     let token = generate_token(user_id, UserRole::School, &jwt_secret).unwrap();
 
     let app = Router::new()
-        .route("/:id", patch(update_review_handler))
+        .route("/{id}", patch(update_review_handler))
         .layer(middleware::from_fn_with_state(
             middleware_state,
             auth_middleware,
@@ -434,7 +434,7 @@ async fn test_delete_review_success() {
     let token = generate_token(user_id, UserRole::School, &jwt_secret).unwrap();
 
     let app = Router::new()
-        .route("/:id", delete(delete_review_handler))
+        .route("/{id}", delete(delete_review_handler))
         .layer(middleware::from_fn_with_state(
             middleware_state,
             auth_middleware,

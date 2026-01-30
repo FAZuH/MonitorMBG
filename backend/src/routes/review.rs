@@ -136,7 +136,7 @@ pub fn review_routes(state: ReviewState, auth_middleware_state: MiddlewareAuthSt
         .route("/", post(submit_review_handler))
         .route("/batch", post(submit_batch_reviews_handler))
         .route(
-            "/:id",
+            "/{id}",
             patch(update_review_handler).delete(delete_review_handler),
         )
         .layer(middleware::from_fn_with_state(
@@ -145,7 +145,7 @@ pub fn review_routes(state: ReviewState, auth_middleware_state: MiddlewareAuthSt
         ));
 
     let public_routes = Router::new()
-        .route("/kitchen/:kitchenId", get(get_kitchen_reviews_handler))
+        .route("/kitchen/{kitchenId}", get(get_kitchen_reviews_handler))
         .route("/public", get(get_public_reviews_handler));
 
     Router::new()

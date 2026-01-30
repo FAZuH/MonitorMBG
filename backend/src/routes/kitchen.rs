@@ -105,7 +105,7 @@ pub fn kitchen_routes(state: KitchenState) -> Router {
     Router::new()
         .route("/", get(list_kitchens_handler))
         .route("/batch", get(get_multiple_kitchens_handler))
-        .route("/:id", get(get_kitchen_detail_handler))
-        .route("/:id/stats", get(get_kitchen_stats_handler))
+        .route("/{id}", get(get_kitchen_detail_handler))
+        .route("/{id}/stats", get(get_kitchen_stats_handler))
         .with_state(state)
 }
