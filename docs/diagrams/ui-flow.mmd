@@ -1,0 +1,57 @@
+stateDiagram-v2
+    [*] --> Public
+    
+    state Public {
+        [*] --> Landing
+        Landing --> PublicMap: View Incident Map
+        Landing --> PublicLocation: Find Kitchen
+        PublicLocation --> PublicKitchenDetail: Select Kitchen
+        PublicKitchenDetail --> PublicLocation: Back
+        PublicMap --> Landing: Back
+    }
+    
+    %% Authentication Flow
+    Public --> Login: Click Login
+    Login --> Register: No account?
+    Register --> Login: Back to Login
+    Register --> Authenticated: Register Success
+    Login --> Authenticated: Login Success
+    Login --> Public: Back to Home
+    
+    %% Authenticated Flow
+    state Authenticated {
+        [*] --> Dashboard
+        
+        state Dashboard {
+            [*] --> KitchenList
+            
+            state KitchenList {
+                [*] --> ViewList
+                ViewList --> ViewDetail: Select Kitchen
+            }
+            
+            state ViewDetail {
+                [*] --> Details
+                Details --> ReviewForm: Add Review
+                ReviewForm --> Details: Submit/Cancel
+            }
+            
+            state IncidentMap {
+                [*] --> MapView
+                MapView --> IncidentDetail: Click Pin
+            }
+            
+            %% Tab Navigation
+            KitchenList --> IncidentMap: Switch Tab
+            IncidentMap --> KitchenList: Switch Tab
+        }
+        
+        %% Header Actions
+        Dashboard --> NotificationDetail: Click Notification
+        NotificationDetail --> Dashboard: Close
+        
+        Dashboard --> Profile: View Profile
+        Profile --> Dashboard: Back
+    }
+    
+    Authenticated --> Login: Logout

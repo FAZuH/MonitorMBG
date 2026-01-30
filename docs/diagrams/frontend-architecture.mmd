@@ -1,0 +1,68 @@
+graph TD
+    %% Main Application Controller
+    App["App.tsx<br/>Main Controller"]
+    
+    %% State Management
+    subgraph State [Local State Management]
+        AuthState["authState<br/>(Navigation Control)"]
+        UserData[currentUser]
+        AppData["kitchens / notifications"]
+    end
+    
+    App --> State
+    
+    %% View Layer
+    subgraph Views [View Layer]
+        direction TB
+        PublicView[PublicDashboard]
+        LoginView[LoginPage]
+        RegisterView[RegistrationPage]
+        AuthView[Authenticated Layout]
+    end
+    
+    %% State-based Routing
+    State -- "public" --> PublicView
+    State -- "login" --> LoginView
+    State -- "register" --> RegisterView
+    State -- "authenticated" --> AuthView
+    
+    %% Authenticated Components
+    subgraph AuthComponents [Authenticated Components]
+        Header[DashboardHeader]
+        Nav[Navigation Tabs]
+        
+        subgraph ContentArea [Main Content Area]
+            KList[KitchenList]
+            KDetail[KitchenDetail]
+            RForm[ReviewForm]
+            Map[IncidentMap]
+            Edu[HACCPEducation]
+        end
+        
+        AuthView --> Header
+        AuthView --> Nav
+        AuthView --> ContentArea
+        
+        %% Component Interactions
+        KList -- "Select Kitchen" --> KDetail
+        KDetail -- "Add Review" --> RForm
+        Header -- "View Notifications" --> NotificationPanel
+    end
+    
+    %% Public Components
+    subgraph PublicComponents [Public Components]
+        PublicView --> PMap[IncidentMap]
+        PublicView --> PLoc[LocationFilter]
+        PLoc --> PDetail[KitchenDetail]
+    end
+    
+    %% Styling
+    classDef main fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef state fill:#e1f5fe,stroke:#01579b;
+    classDef view fill:#e8f5e9,stroke:#2e7d32;
+    classDef component fill:#fff3e0,stroke:#ef6c00;
+    
+    class App main;
+    class AuthState,UserData,AppData state;
+    class PublicView,LoginView,RegisterView,AuthView view;
+    class Header,Nav,KList,KDetail,RForm,Map,Edu,PMap,PLoc,PDetail component;

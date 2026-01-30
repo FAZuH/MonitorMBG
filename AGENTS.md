@@ -206,6 +206,13 @@ refactor(service): Extract common pagination logic
   - Architecture patterns
   - Debugging guides
 
+- **`docs/frontend-development.md`**: Update when changing:
+  - Frontend setup or installation
+  - Component structure or patterns
+  - State management
+  - UI flows
+  - Styling guidelines
+
 - **`docs/architecture.md`**: Update when changing:
   - System architecture
   - Database schema

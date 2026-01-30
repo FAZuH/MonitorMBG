@@ -1278,6 +1278,31 @@ The health check endpoint reports storage status:
 
 ---
 
+### WhatsApp OTP Configuration
+
+The API supports WhatsApp Business API integration for OTP delivery. This feature is **optional** and can be enabled/disabled via configuration.
+
+**Environment Variables:**
+
+| Variable | Required | Description | Default |
+|----------|----------|-------------|---------|
+| `WHATSAPP_ENABLED` | No | Enable WhatsApp OTP feature | `false` |
+| `WHATSAPP_API_URL` | Yes* | WhatsApp Business API base URL | - |
+| `WHATSAPP_API_TOKEN` | Yes* | WhatsApp Business API access token | - |
+| `WHATSAPP_PHONE_NUMBER_ID` | Yes* | WhatsApp Business phone number ID | - |
+| `WHATSAPP_OTP_EXPIRY_SECONDS` | No | OTP code expiration time in seconds | `300` (5 min) |
+| `WHATSAPP_MAX_ATTEMPTS` | No | Maximum verification attempts per OTP | `5` |
+
+*Required only when `WHATSAPP_ENABLED=true`
+
+**Health Check:**
+
+The health check endpoint (`GET /health`) reports WhatsApp status:
+- `healthy`: WhatsApp API is accessible and configured
+- `unhealthy`: WhatsApp API is unavailable or not configured
+
+---
+
 ## TypeScript Type Definitions
 
 ```typescript

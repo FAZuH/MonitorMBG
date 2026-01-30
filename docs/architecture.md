@@ -8,6 +8,10 @@
 
 ![Backend Architecture](diagrams/backend-architecture.png)
 
+## Frontend Architecture
+
+![Frontend Architecture](diagrams/frontend-architecture.png)
+
 ## Database Schema Overview
 
 ![Database Schema](diagrams/database-schema.png)
@@ -15,6 +19,10 @@
 ## Authentication Flow
 
 ![Authentication Flow](diagrams/authentication-flow.png)
+
+## UI Flow
+
+![UI Flow](diagrams/ui-flow.png)
 
 ## Request Lifecycle
 
