@@ -1,0 +1,111 @@
+erDiagram
+    USERS ||--o{ REVIEWS : writes
+    USERS ||--o{ KITCHENS : owns
+    KITCHENS ||--o{ REVIEWS : receives
+    KITCHENS ||--o{ INCIDENTS : has
+    KITCHENS ||--o{ COMPLIANCE_METRICS : tracked_by
+    KITCHENS ||--o{ PERFORMANCE_BADGES : earns
+    INCIDENTS ||--o{ INSPECTIONS : investigated_by
+    COMPLAINTS ||--o{ COMPLAINT_EVIDENCE : has
+    REVIEWS ||--o{ REVIEW_DISPUTE_HISTORY : disputed
+
+    USERS {
+        uuid id PK
+        string name
+        user_role_enum role
+        string unique_code
+        string phone
+        boolean verified
+        string institution_name
+        uuid institution_id
+        string password_hash
+        timestamp created_at
+    }
+
+    KITCHENS {
+        uuid id PK
+        string name
+        string address
+        string city
+        string province
+        kitchen_type_enum type
+        int meals_served
+        jsonb certifications
+        string image_url
+        uuid owner_id FK
+        timestamp created_at
+    }
+
+    REVIEWS {
+        uuid id PK
+        uuid kitchen_id FK
+        uuid reviewer_id FK
+        string reviewer_name
+        user_role_enum reviewer_type
+        decimal taste_rating
+        decimal hygiene_rating
+        decimal freshness_rating
+        decimal temperature_rating
+        decimal packaging_rating
+        decimal handling_rating
+        string comment
+        jsonb photos
+        boolean verified
+        timestamp created_at
+    }
+
+    INCIDENTS {
+        uuid id PK
+        uuid kitchen_id FK
+        incident_type_enum type
+        incident_severity_enum severity
+        incident_status_enum status
+        timestamp date
+        string location
+        string province
+        int affected_count
+        int deaths
+        string cause
+        jsonb map_coordinates
+        timestamp created_at
+    }
+
+    COMPLIANCE_METRICS {
+        uuid id PK
+        uuid kitchen_id FK
+        decimal hygiene_score
+        decimal portion_compliance
+        decimal nutrition_compliance
+        decimal temperature_control
+        timestamp last_inspection_date
+        timestamp created_at
+    }
+
+    PERFORMANCE_BADGES {
+        uuid id PK
+        uuid kitchen_id FK
+        string type
+        string title
+        string description
+        date earned_date
+    }
+
+    COMPLAINTS {
+        uuid id PK
+        uuid kitchen_id FK
+        complaint_category_enum category
+        string description
+        complaint_status_enum status
+        timestamp reported_at
+        timestamp sla_deadline
+    }
+
+    INSTITUTIONS {
+        uuid id PK
+        string name
+        string type
+        string address
+        string city
+        string province
+        boolean verified
+    }

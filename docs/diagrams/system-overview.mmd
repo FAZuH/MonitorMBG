@@ -1,0 +1,56 @@
+graph TB
+    subgraph Client["Client Layer"]
+        Web["Web Application<br/>React + TypeScript"]
+        Mobile["Mobile Browser"]
+    end
+
+    subgraph API["API Layer (Axum)"]
+        Router["Router"]
+        Middleware["Middleware<br/>- Rate Limiting<br/>- Auth<br/>- Logging"]
+        Handlers["Handlers<br/>src/routes/"]
+    end
+
+    subgraph Service["Service Layer"]
+        AuthService["AuthService<br/>- Login/Register<br/>- JWT"]
+        KitchenService["KitchenService<br/>- CRUD<br/>- Stats"]
+        ReviewService["ReviewService<br/>- HACCP Ratings"]
+        IncidentService["IncidentService<br/>- Reports"]
+        StatsService["StatsService<br/>- Analytics"]
+        UtilityService["UtilityService<br/>- Uploads"]
+    end
+
+    subgraph Database["Database Layer (PostgreSQL)"]
+        Tables["Table Traits<br/>- CRUD Operations"]
+        Models["Models<br/>src/database/model.rs"]
+        Queries["Custom Queries<br/>- StatsQueries<br/>- Kitchen Queries"]
+    end
+
+    subgraph External["External Services"]
+        Storage["File Storage<br/>(S3/GCS)"]
+        WhatsApp["WhatsApp API<br/>(OTP)"]
+    end
+
+    Web --> Router
+    Mobile --> Router
+    Router --> Middleware
+    Middleware --> Handlers
+    
+    Handlers --> AuthService
+    Handlers --> KitchenService
+    Handlers --> ReviewService
+    Handlers --> IncidentService
+    Handlers --> StatsService
+    Handlers --> UtilityService
+    
+    AuthService --> Tables
+    KitchenService --> Tables
+    ReviewService --> Tables
+    IncidentService --> Tables
+    StatsService --> Queries
+    UtilityService --> Tables
+    
+    Tables --> Models
+    Queries --> Models
+    
+    UtilityService -.-> Storage
+    AuthService -.-> WhatsApp

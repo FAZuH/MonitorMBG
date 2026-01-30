@@ -1,0 +1,54 @@
+classDiagram
+    class Service~T~ {
+        +Arc~Database~ db
+        +new(db: Arc~Database~)
+    }
+
+    class KitchenService {
+        +list_kitchens()
+        +get_kitchen_detail()
+        +get_kitchen_stats()
+    }
+
+    class ReviewService {
+        +submit_review()
+        +get_kitchen_reviews()
+        +update_review()
+        +delete_review()
+    }
+
+    class AuthService {
+        +register_user()
+        +login_user()
+    }
+
+    class IncidentService {
+        +list_incidents()
+        +get_incident_detail()
+    }
+
+    class StatsService {
+        +get_national_stats()
+        +get_regional_stats()
+        +get_compliance_trends()
+    }
+
+    Service <|-- KitchenService
+    Service <|-- ReviewService
+    Service <|-- AuthService
+    Service <|-- IncidentService
+    Service <|-- StatsService
+
+    class Database {
+        +pool: PgPool
+        +user_table: UserTable
+        +kitchen_table: KitchenTable
+        +review_table: ReviewTable
+        +stats_queries: StatsQueries
+    }
+
+    KitchenService --> Database
+    ReviewService --> Database
+    AuthService --> Database
+    IncidentService --> Database
+    StatsService --> Database

@@ -1,0 +1,31 @@
+flowchart TB
+    subgraph Request["HTTP Request Flow"]
+        direction TB
+        Req["Request"]
+        RL["Rate Limit<br/>Middleware"]
+        Auth["Auth<br/>Middleware"]
+        Handler["Handler<br/>Input Validation"]
+    end
+
+    subgraph Business["Business Logic"]
+        direction TB
+        Service["Service Layer<br/>Arc<Database>"]
+        Logic["Business Rules<br/>- Validation<br/>- Authorization"]
+    end
+
+    subgraph Data["Data Access"]
+        direction TB
+        DB["Database Struct<br/>src/database/mod.rs"]
+        Tables["Table Implementations<br/>impl_table! macro"]
+        SQL["SQLx Queries<br/>Type-safe SQL"]
+    end
+
+    Req --> RL
+    RL --> Auth
+    Auth --> Handler
+    Handler --> Service
+    Service --> Logic
+    Logic --> DB
+    DB --> Tables
+    Tables --> SQL
+    SQL --> Postgres[(PostgreSQL)]

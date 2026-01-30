@@ -1,0 +1,22 @@
+sequenceDiagram
+    participant Client
+    participant Handler
+    participant AuthService
+    participant DB
+    participant JWT
+
+    Client->>Handler: POST /auth/login<br/>{uniqueCode, password}
+    Handler->>AuthService: login_user(code, password)
+    AuthService->>DB: find_by_unique_code(code)
+    DB-->>AuthService: User (or None)
+
+    alt User Found
+        AuthService->>AuthService: verify_password()
+        AuthService->>JWT: generate_token(user_id, role)
+        JWT-->>AuthService: token
+        AuthService-->>Handler: (token, user)
+        Handler-->>Client: 200 OK<br/>{token, user}
+    else Invalid Credentials
+        AuthService-->>Handler: Unauthorized
+        Handler-->>Client: 401 Unauthorized
+    end

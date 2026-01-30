@@ -1,0 +1,42 @@
+graph TB
+    subgraph Production["Production Environment"]
+        LB["Load Balancer<br/>Nginx/ALB"]
+        
+        subgraph App["Application Tier"]
+            API1["API Server 1"]
+            API2["API Server 2"]
+            API3["API Server 3"]
+        end
+        
+        subgraph Data["Data Tier"]
+            Primary["PostgreSQL<br/>Primary"]
+            Replica["PostgreSQL<br/>Replica"]
+        end
+        
+        subgraph Cache["Cache Layer"]
+            Redis["Redis<br/>Session/Cache"]
+        end
+        
+        subgraph Storage["Storage"]
+            S3["Object Storage<br/>Images/Files"]
+        end
+    end
+
+    Users["Users"] --> LB
+    LB --> API1
+    LB --> API2
+    LB --> API3
+    
+    API1 --> Primary
+    API2 --> Primary
+    API3 --> Primary
+    
+    Primary --> Replica
+    
+    API1 --> Redis
+    API2 --> Redis
+    API3 --> Redis
+    
+    API1 --> S3
+    API2 --> S3
+    API3 --> S3

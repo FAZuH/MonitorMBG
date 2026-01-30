@@ -1,0 +1,36 @@
+sequenceDiagram
+    participant Client
+    participant Router
+    participant RateLimit
+    participant Auth
+    participant Handler
+    participant Service
+    participant Database
+    participant PostgreSQL
+
+    Client->>Router: HTTP Request
+    Router->>RateLimit: Check rate limit
+    RateLimit-->>Router: Allow/Deny
+
+    alt Rate limited
+        Router-->>Client: 429 Too Many Requests
+    else Allowed
+        Router->>Auth: Validate JWT (if protected)
+        Auth-->>Router: Claims/Error
+
+        alt Invalid Auth
+            Router-->>Client: 401 Unauthorized
+        else Valid
+            Router->>Handler: Route to handler
+            Handler->>Handler: Parse & validate input
+            Handler->>Service: Call service method
+            Service->>Service: Business logic
+            Service->>Database: Query/Update data
+            Database->>PostgreSQL: Execute SQL
+            PostgreSQL-->>Database: Results
+            Database-->>Service: Data
+            Service-->>Handler: DTO
+            Handler-->>Router: Response
+            Router-->>Client: HTTP Response
+        end
+    end
