@@ -366,7 +366,7 @@ impl StatsService {
             period: DateRangeDto {
                 from: chrono::Utc::now()
                     .checked_sub_months(chrono::Months::new(months as u32))
-                    .unwrap_or_else(|| chrono::Utc::now())
+                    .unwrap_or_else(chrono::Utc::now)
                     .to_rfc3339(),
                 to: chrono::Utc::now().to_rfc3339(),
             },
@@ -446,7 +446,7 @@ impl StatsService {
             period: DateRangeDto {
                 from: chrono::Utc::now()
                     .checked_sub_months(chrono::Months::new(months as u32))
-                    .unwrap_or_else(|| chrono::Utc::now())
+                    .unwrap_or_else(chrono::Utc::now)
                     .to_rfc3339(),
                 to: chrono::Utc::now().to_rfc3339(),
             },

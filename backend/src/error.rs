@@ -77,8 +77,9 @@ pub enum AppErrorKind {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use axum::response::IntoResponse;
+
+    use super::*;
 
     #[test]
     fn test_error_display_messages() {

@@ -4,31 +4,46 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::Request;
 use axum::http::StatusCode;
-use axum::routing::{get, post, patch, delete};
 use axum::middleware;
-use backend::auth::middleware::{AuthState as MiddlewareAuthState, auth_middleware};
-use backend::auth::utils::{generate_token};
+use axum::routing::delete;
+use axum::routing::get;
+use axum::routing::patch;
+use axum::routing::post;
+use backend::auth::middleware::AuthState;
+use backend::auth::middleware::auth_middleware;
+use backend::auth::utils::generate_token;
 use backend::config::Config;
-use backend::database::model::{Kitchen, User, UserRole, Review};
+use backend::database::model::Kitchen;
+use backend::database::model::Review;
+use backend::database::model::User;
+use backend::database::model::UserRole;
 use backend::database::table::Table;
 use backend::routes::review::ReviewState;
-use backend::routes::review::{submit_review_handler, get_kitchen_reviews_handler, get_public_reviews_handler, submit_batch_reviews_handler, update_review_handler, delete_review_handler};
+use backend::routes::review::delete_review_handler;
+use backend::routes::review::get_kitchen_reviews_handler;
+use backend::routes::review::get_public_reviews_handler;
+use backend::routes::review::submit_review_handler;
+use backend::routes::review::update_review_handler;
 use backend::service::auth::AuthService;
-use backend::service::review::{ReviewService, CreateReviewRequest, HaccpRatingDto, UpdateReviewRequest};
+use backend::service::review::CreateReviewRequest;
+use backend::service::review::HaccpRatingDto;
+use backend::service::review::ReviewService;
+use backend::service::review::UpdateReviewRequest;
 use tower::util::ServiceExt;
-use uuid::Uuid;
 
 mod common;
 
-async fn setup_auth_state(db: Arc<backend::database::Database>) -> (Arc<AuthService>, MiddlewareAuthState, String) {
+async fn setup_auth_state(
+    db: Arc<backend::database::Database>,
+) -> (Arc<AuthService>, AuthState, String) {
     let config = Arc::new(Config {
         jwt_secret: "test_secret".to_string(),
         ..Default::default()
     });
 
     let auth_service = Arc::new(AuthService::new(db.clone(), config.clone()));
-    
-    let middleware_state = MiddlewareAuthState {
+
+    let middleware_state = AuthState {
         config: config.clone(),
     };
 

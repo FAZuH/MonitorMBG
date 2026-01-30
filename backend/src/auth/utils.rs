@@ -3,18 +3,18 @@
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
-use argon2::password_hash::rand_core::OsRng;
+use argon2::Argon2;
 use argon2::password_hash::PasswordHash;
 use argon2::password_hash::PasswordHasher;
 use argon2::password_hash::PasswordVerifier;
 use argon2::password_hash::SaltString;
-use argon2::Argon2;
-use jsonwebtoken::decode;
-use jsonwebtoken::encode;
+use argon2::password_hash::rand_core::OsRng;
 use jsonwebtoken::DecodingKey;
 use jsonwebtoken::EncodingKey;
 use jsonwebtoken::Header;
 use jsonwebtoken::Validation;
+use jsonwebtoken::decode;
+use jsonwebtoken::encode;
 use serde::Deserialize;
 use serde::Serialize;
 use uuid::Uuid;
@@ -93,7 +93,8 @@ pub fn validate_token(token: &str, secret: &str) -> Result<Claims, AppError> {
 
 #[cfg(test)]
 mod tests {
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use std::time::SystemTime;
+    use std::time::UNIX_EPOCH;
 
     use uuid::Uuid;
 

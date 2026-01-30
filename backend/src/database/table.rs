@@ -662,7 +662,7 @@ impl IncidentTable {
     /// Get affected institutions for an incident
     pub async fn get_affected_institutions(
         &self,
-        incident_id: &Uuid,
+        _incident_id: &Uuid,
     ) -> Result<Vec<String>, DatabaseError> {
         // For now, return empty list - would query a separate table in production
         let institutions: Vec<String> = vec![];
